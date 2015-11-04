@@ -1,0 +1,39 @@
+{
+  "name": "homebridge-isy-js",
+  "version": "0.0.1",
+  "description": "Homebridge plugin for ISY series of home controllers from universal devices ",
+  "note": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "echo \"Error: configure and run homebridge to start\" && exit 1"
+  },
+  "engines": {
+    "node": ">4.0.0",
+    "homebridge": ">=0.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rodtoll/homebridge-isy-js.git"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "isy",
+    "Home Center",
+    "homekit",
+    "insteon",
+    "Siri"
+  ],
+  "dependencies": {
+    "restler": "",
+    "faye-websocket": "",
+    "xmldoc": "",
+    "isy-js": ""
+  },
+  "author": "rodtoll",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rodtoll/homebridge-isy-js/issues"
+  },
+  "homepage": "https://github.com/rodtoll/homebridge-isy-js"
+}
