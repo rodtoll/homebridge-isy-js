@@ -27,6 +27,7 @@ Configuration sample:
             "username": "admin",      
             "password": "password",   
             "elkEnabled": true,       
+            "useHttps": false,
             "ignoreDevices": [        
                 { "nameContains": "ApplianceLinc", "lastAddressDigit": "", "address": ""},
                 { "nameContains": "Bedroom.Side Gate", "lastAddressDigit": "", "address": ""},
@@ -44,6 +45,7 @@ Fields:
 * "username" - Your ISY username
 * "password" - Your ISY password
 * "elkEnabled" - true if there is an elk alarm panel connected to your ISY
+* "useHttps" - true if you want to use a https connection to the ISY. Only use if you have HTTPS setup with a proper cert.
 * "ignoreDevices" - Array of objects specifying criteria for screening out devices from the network. nameContains is the only required criteria. If the other criteri are blank all devices will match those criteria (providing they match the name criteria).
 * (Under ignoreDevices) "nameContains" - Specifies a substring to check against the names of the ISY devices. Required field for the criteria.
 * (Under ignoreDevices) "lastAddressDigit" - Specifies a single digit in the ISY address of a device which should be used to match the device. Example use of this is for composite devices like keypads so you can screen out the non-main buttons. 

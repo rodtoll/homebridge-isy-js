@@ -94,7 +94,7 @@ function ISYPlatform(log,config) {
 	this.username = config.username;
 	this.password = config.password;
 	this.elkEnabled = config.elkEnabled;
-	this.isy = new isy.ISY(this.host, this.username,this.password, config.elkEnabled, ISYChangeHandler);
+	this.isy = new isy.ISY(this.host, this.username,this.password, config.elkEnabled, ISYChangeHandler, config.useHttps);
 }
 
 // Checks the device against the configuration to see if it should be ignored. 
