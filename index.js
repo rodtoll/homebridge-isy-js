@@ -70,9 +70,9 @@ function ISYChangeHandler(isy,device) {
 }
 
 // Helper function to have ISYJSDEBUG control if debug output appears
-function ISYJSDebugMessage(isy,message) {
+function ISYJSDebugMessage(message) {
 	if(process.env.ISYJSDEBUG != undefined) {
-		isy.log(message);
+		console.log(message);
 	}
 }
 
@@ -118,7 +118,7 @@ ISYPlatform.prototype.shouldIgnore = function(device) {
 				continue;
 			} 
 		}
-		ISYJSDebugMessage(this,"Ignoring device: "+deviceName+" ["+deviceAddress+"] because of rule ["+rule.nameContains+"] ["+rule.lastAddressDigit+"] ["+rule.address+"]");						
+		ISYJSDebugMessage("Ignoring device: "+deviceName+" ["+deviceAddress+"] because of rule ["+rule.nameContains+"] ["+rule.lastAddressDigit+"] ["+rule.address+"]");						
 		return true;
 
 	}
@@ -166,7 +166,7 @@ ISYPlatform.prototype.accessories = function(callback) {
 			deviceMap[panelDevice.address] = panelDeviceHK;
 			results.push(panelDeviceHK);
 		}
-		ISYJSDebugMessage(that,"Filtered device has: "+results.length+" devices");
+		ISYJSDebugMessage("Filtered device has: "+results.length+" devices");
 		callback(results);		
 	});
 }
@@ -201,7 +201,7 @@ ISYFanAccessory.prototype.identify = function(callback) {
 // Homekit doesn't have steps for the fan speed and needs to have a value from 0 to 100. We 
 // split the range into 4 steps and map them to the 4 isy-js levels. 
 ISYFanAccessory.prototype.translateFanSpeedToHK = function(fanSpeed) {
-	if(fanSpeed == this.device.FAN_LEVEL_OFF) {
+	if(fanSpeed == this.device.FAN_OFF) {
 		return 0;
 	} else if(fanSpeed == this.device.FAN_LEVEL_LOW) {
 		return 32;
@@ -210,7 +210,7 @@ ISYFanAccessory.prototype.translateFanSpeedToHK = function(fanSpeed) {
 	} else if(fanSpeed == this.device.FAN_LEVEL_HIGH) {
 		return 100;
 	} else {
-		ISYJSDebugMessage(this,"!!!! ERROR: Unknown fan speed: "+fanSpeed);
+		ISYJSDebugMessage("!!!! ERROR: Unknown fan speed: "+fanSpeed);
 		return 0;
 	}
 }
@@ -219,7 +219,7 @@ ISYFanAccessory.prototype.translateFanSpeedToHK = function(fanSpeed) {
 // to the four isy-js fan speed levels. 
 ISYFanAccessory.prototype.translateHKToFanSpeed = function(fanStateHK) {
 	if(fanStateHK == 0) {
-		return this.device.FAN_LEVEL_OFF;
+		return this.device.FAN_OFF;
 	} else if(fanStateHK > 0 && fanStateHK <=32) {
 		return this.device.FAN_LEVEL_LOW;
 	} else if(fanStateHK >= 33 && fanStateHK <= 67) {
@@ -227,32 +227,35 @@ ISYFanAccessory.prototype.translateHKToFanSpeed = function(fanStateHK) {
 	} else if(fanStateHK > 67) {
 		return this.device.FAN_LEVEL_HIGH;
 	} else {
-		ISYJSDebugMessage(this,"ERROR: Unknown fan state!");
-		return this.device.FAN_LEVEL_OFF;
+		ISYJSDebugMessage("ERROR: Unknown fan state!");
+		return this.device.FAN_OFF;
 	}
 }
 
 // Returns the current state of the fan from the isy-js level to the 0-100 level of HK.
 ISYFanAccessory.prototype.getFanRotationSpeed = function(callback) {
+	ISYJSDebugMessage( "Getting fan rotation speed. Device says: "+this.device.getCurrentFanState()+" translation says: "+this.translateFanSpeedToHK(this.device.getCurrentFanState()))
 	callback(null,this.translateFanSpeedToHK(this.device.getCurrentFanState()));
 }
 
 // Sets the current state of the fan from the 0-100 level of HK to the isy-js level.
 ISYFanAccessory.prototype.setFanRotationSpeed = function(fanStateHK,callback) {
+	ISYJSDebugMessage( "Sending command to set fan state(pre-translate) to: "+fanStateHK);
 	var newFanState = this.translateHKToFanSpeed(fanStateHK);
-	ISYJSDebugMessage(this,"Sending command to set fan state to: "+newFanState);
+	ISYJSDebugMessage("Sending command to set fan state to: "+newFanState);
 	if(newFanState != this.device.getCurrentFanState()) {
 		this.device.sendFanCommand(newFanState, function(result) {
 			callback();		
 		});
 	} else {
-		ISYJSDebugMessage(this,"Fan command does not change actual speed");
+		ISYJSDebugMessage("Fan command does not change actual speed");
 		callback();
 	}
 }
 
 // Returns true if the fan is on
 ISYFanAccessory.prototype.getIsFanOn = function() {
+	ISYJSDebugMessage( "Getting fan is on. Device says: "+this.device.getCurrentFanState()+" Code says: "+(this.device.getCurrentFanState() != "Off"));
 	return (this.device.getCurrentFanState() != "Off");
 }
 
@@ -263,20 +266,24 @@ ISYFanAccessory.prototype.getFanOnState = function(callback) {
 
 // Sets the fan state based on the value of the On characteristic. Default to Medium for on. 
 ISYFanAccessory.prototype.setFanOnState = function(onState,callback) {
+	ISYJSDebugMessage( "Setting fan on state to: "+onState+" Device says: "+this.device.getCurrentFanState());
 	if(onState != this.getIsFanOn()) {
 		if(onState) {
+			ISYJSDebugMessage( "Setting fan speed to medium");
 			this.setFanRotationSpeed(this.translateFanSpeedToHK(this.device.FAN_LEVEL_MEDIUM), callback);
 		} else {
-			this.setFanRotationSpeed(this.translateFanSpeedToHK(this.device.FAN_LEVEL_OFF), callback);
+			ISYJSDebugMessage( "Setting fan speed to off");
+			this.setFanRotationSpeed(this.translateFanSpeedToHK(this.device.FAN_OFF), callback);
 		}
 	} else {
-		ISYJSDebugMessage(this,"Fan command does not change actual state");
+		ISYJSDebugMessage("Fan command does not change actual state");
 		callback();
 	} 
 }
 
 // Mirrors change in the state of the underlying isj-js device object.
 ISYFanAccessory.prototype.handleExternalChange = function() {
+	ISYJSDebugMessage( "Incoming external change. Device says: "+this.device.getCurrentFanState());
 	this.fanService
 		.setCharacteristic(Characteristic.On, this.getIsFanOn());
 		
@@ -334,7 +341,7 @@ ISYOutletAccessory.prototype.identify = function(callback) {
 
 // Handles a request to set the outlet state. Ignores redundant sets based on current states.
 ISYOutletAccessory.prototype.setOutletState = function(outletState,callback) {
-	ISYJSDebugMessage(this,"Sending command to set outlet state to: "+outletState);
+	ISYJSDebugMessage("Sending command to set outlet state to: "+outletState);
 	if(outletState != this.device.getCurrentOutletState()) {
 		this.device.sendOutletCommand(outletState, function(result) {
 			callback();		
@@ -491,21 +498,21 @@ ISYLightAccessory.prototype.identify = function(callback) {
 
 // Handles request to set the current powerstate from homekit. Will ignore redundant commands. 
 ISYLightAccessory.prototype.setPowerState = function(powerOn,callback) {
-	ISYJSDebugMessage(this,"Setting powerstate to %s", powerOn);
+	ISYJSDebugMessage("Setting powerstate to "+powerOn);
 	if(powerOn != this.device.getCurrentLightState()) {
-		ISYJSDebugMessage(this,"Changing powerstate to "+powerOn);
+		ISYJSDebugMessage("Changing powerstate to "+powerOn);
 		this.device.sendLightCommand(powerOn, function(result) {
 			callback();
 		});
 	} else {
-		ISYJSDebugMessage(this,"Ignoring redundant setPowerState");
+		ISYJSDebugMessage("Ignoring redundant setPowerState");
 		callback();
 	}
 }
 
 // Mirrors change in the state of the underlying isj-js device object.
 ISYLightAccessory.prototype.handleExternalChange = function() {
-	ISYJSDebugMessage(this,"Handling external change for light");
+	ISYJSDebugMessage("Handling external change for light");
 	this.lightService
 		.setCharacteristic(Characteristic.On, this.device.getCurrentLightState());
 	if(this.device.deviceType == this.device.isy.DEVICE_TYPE_DIMMABLE_LIGHT) {
@@ -521,14 +528,14 @@ ISYLightAccessory.prototype.getPowerState = function(callback) {
 
 // Handles request to set the brightness level of dimmable lights. Ignore redundant commands. 
 ISYLightAccessory.prototype.setBrightness = function(level,callback) {
-	ISYJSDebugMessage(this,"Setting brightness to %s", level);
+	ISYJSDebugMessage("Setting brightness to "+level);
 	if(level != this.device.getCurrentLightDimState()) {
-		ISYJSDebugMessage(this,"Changing Brightness to "+level);
+		ISYJSDebugMessage("Changing Brightness to "+level);
 		this.device.sendLightDimCommand(level, function(result) {
 			callback();			
 		});
 	} else {
-		ISYJSDebugMessage(this,"Ignoring redundant setBrightness");
+		ISYJSDebugMessage("Ignoring redundant setBrightness");
 		callback();
 	}
 }
@@ -689,15 +696,15 @@ ISYElkAlarmPanelAccessory.prototype.identify = function(callback) {
 
 // Handles the request to set the alarm target state
 ISYElkAlarmPanelAccessory.prototype.setAlarmTargetState = function(targetStateHK,callback) {
-	ISYJSDebugMessage(this,"Sending command to set alarm panel state to: "+targetStateHK);
+	ISYJSDebugMessage("Sending command to set alarm panel state to: "+targetStateHK);
 	var targetState = this.translateHKToAlarmTargetState(targetStateHK);
-	ISYJSDebugMessage(this,"Would send the target state of: "+targetState);
+	ISYJSDebugMessage("Would send the target state of: "+targetState);
 	if(this.device.getAlarmMode() != targetState) {
 		this.device.sendSetAlarmModeCommand(targetState, function(result) {
 			callback();		
 		});
 	} else {
-		ISYJSDebugMessage(this,"Redundant command, already in that state.");
+		ISYJSDebugMessage("Redundant command, already in that state.");
 		callback();
 	}
 }
@@ -725,7 +732,7 @@ ISYElkAlarmPanelAccessory.prototype.translateAlarmCurrentStateToHK = function() 
 		} else if(sourceAlarmMode == this.device.ALARM_MODE_NIGHT || sourceAlarmMode == this.device.ALARM_MODE_NIGHT_INSTANT) {
 			return Characteristic.SecuritySystemCurrentState.NIGHT_ARM;
 		} else {
-			ISYJSDebugMessage(this,"Setting to disarmed because sourceAlarmMode is "+sourceAlarmMode);
+			ISYJSDebugMessage("Setting to disarmed because sourceAlarmMode is "+sourceAlarmMode);
 			return Characteristic.SecuritySystemCurrentState.DISARMED;
 		}
 	}
@@ -770,8 +777,8 @@ ISYElkAlarmPanelAccessory.prototype.getAlarmCurrentState = function(callback) {
 
 // Mirrors change in the state of the underlying isj-js device object.
 ISYElkAlarmPanelAccessory.prototype.handleExternalChange = function() {
-	ISYJSDebugMessage(this,"Source device. Currenty state locally -"+this.device.getAlarmStatusAsText());
-	ISYJSDebugMessage(this,"Got alarm change notification. Setting HK target state to: "+this.translateAlarmTargetStateToHK()+" Setting HK Current state to: "+this.translateAlarmCurrentStateToHK());
+	ISYJSDebugMessage("Source device. Currenty state locally -"+this.device.getAlarmStatusAsText());
+	ISYJSDebugMessage("Got alarm change notification. Setting HK target state to: "+this.translateAlarmTargetStateToHK()+" Setting HK Current state to: "+this.translateAlarmCurrentStateToHK());
 	this.alarmPanelService
 		.setCharacteristic(Characteristic.SecuritySystemTargetState, this.translateAlarmTargetStateToHK());
 	this.alarmPanelService
