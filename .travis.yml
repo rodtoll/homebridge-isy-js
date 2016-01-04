@@ -1,0 +1,8 @@
+language: node_js
+node_js:
+  - "0.10"
+before_script:
+  - cd node_modules/fake-isy-994i
+  - node start.js &
+  - cd ../../
+
