@@ -314,7 +314,7 @@ ISYFanAccessory.prototype.getServices = function() {
 	  .on('get', this.getFanOnState.bind(this));
 	  
 	fanService
-	  .addCharacteristic(new Characteristic.RotationSpeed())
+	  .addCharacteristic(Characteristic.RotationSpeed)
 	  .on('get', this.getFanRotationSpeed.bind(this));	  
   
 	fanService
@@ -569,7 +569,7 @@ ISYLightAccessory.prototype.getServices = function() {
 	  
 	if(this.dimmable) {
 		lightBulbService
-		.addCharacteristic(new Characteristic.Brightness())
+		.addCharacteristic(Characteristic.Brightness)
 		.on('get', this.getBrightness.bind(this));
 		
 		lightBulbService
@@ -815,12 +815,12 @@ ISYElkAlarmPanelAccessory.prototype.getServices = function() {
 }
 
 module.exports.platform = ISYPlatform;
-module.exports.accessory = ISYFanAccessory;
-module.exports.accessory = ISYLightAccessory;
-module.exports.accessory = ISYLockAccessory;
-module.exports.accessory = ISYOutletAccessory;
-module.exports.accessory = ISYDoorWindowSensorAccessory;
-module.exports.accessory = ISYElkAlarmPanelAccessory;
-module.exports.accessory = ISYMotionSensorAccessory
+module.exports.ISYFanAccessory = ISYFanAccessory;
+module.exports.ISYLightAccessory = ISYLightAccessory;
+module.exports.ISYLockAccessory = ISYLockAccessory;
+module.exports.ISYOutletAccessory = ISYOutletAccessory;
+module.exports.ISYDoorWindowSensorAccessory = ISYDoorWindowSensorAccessory;
+module.exports.ISYMotionSensorAccessory = ISYMotionSensorAccessory;
+module.exports.ISYElkAlarmPanelAccessory = ISYElkAlarmPanelAccessory;
 
 

@@ -1,11 +1,11 @@
 {
   "name": "homebridge-isy-js",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Homebridge plugin for ISY series of home controllers from universal devices ",
   "note": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha",
     "start": "echo \"Error: configure and run homebridge to start\" && exit 1"
   },
   "engines": {
@@ -24,6 +24,10 @@
     "insteon",
     "Siri"
   ],
+  "devDependencies": {
+    "mocha": "",
+    "fake-isy-994i": ""
+  },
   "dependencies": {
     "restler": "",
     "faye-websocket": "",
