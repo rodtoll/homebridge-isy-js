@@ -14,6 +14,10 @@
       "username": "admin",
       "password": "password",
       "elkEnabled": true,
+      "includeAllScenes": false,
+      "includedScenes": [
+        "27346"
+      ],
       "ignoreDevices": [
         {
           "nameContains": "S -",
@@ -84,6 +88,5 @@
     }
   ],
   "accessories": [
-
   ]
 }

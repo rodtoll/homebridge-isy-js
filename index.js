@@ -19,7 +19,11 @@
             "host": "10.0.1.12",      
             "username": "admin",      
             "password": "password",   
-            "elkEnabled": true,       
+            "elkEnabled": true,
+            "includeAllScenes": false,
+            "includedScenes": [
+            	"44909"
+            ],
             "ignoreDevices": [        
                 { "nameContains": "ApplianceLinc", "lastAddressDigit": "", "address": ""},
                 { "nameContains": "Bedroom.Side Gate", "lastAddressDigit": "", "address": ""},
@@ -36,6 +40,8 @@
  "username" - Your ISY username
  "password" - Your ISY password
  "elkEnabled" - true if there is an elk alarm panel connected to your ISY
+ "includeAllScenes" - Should all scenes be included and enumerated? true enables all scenes, false enables only those identified in includedScenes section
+ "includedScenes" - List of scenes to include
  "ignoreDevices" - Array of objects specifying criteria for screening out devices from the network. nameContains is the only required criteria. If the other criteria
                    are blank all devices will match those criteria (providing they match the name criteria).
 		"nameContains" - Specifies a substring to check against the names of the ISY devices. Required field for the criteria.
@@ -94,33 +100,48 @@ function ISYPlatform(log,config) {
 	this.username = config.username;
 	this.password = config.password;
 	this.elkEnabled = config.elkEnabled;
-	this.isy = new isy.ISY(this.host, this.username,this.password, config.elkEnabled, ISYChangeHandler, config.useHttps);
+	this.includeAllScenes = (config.includeAllScenes==undefined) ? false : config.includeAllScenes;
+	this.includedScenes = (config.includedScenes==undefined) ? [] : config.includedScenes;
+	this.isy = new isy.ISY(this.host, this.username,this.password, config.elkEnabled, ISYChangeHandler, config.useHttps, true);
 }
 
 // Checks the device against the configuration to see if it should be ignored. 
 ISYPlatform.prototype.shouldIgnore = function(device) {
 	var deviceAddress = device.address;
-	var deviceName = device.name;		
-	for(var index = 0; index < this.config.ignoreDevices.length; index++) {
-		var rule = this.config.ignoreDevices[index];
-		if(rule.nameContains != "") {
-			if(deviceName.indexOf(rule.nameContains) == -1) {
-				continue;
+	var deviceName = device.name;
+	if(device.deviceType==this.isy.DEVICE_TYPE_SCENE) {
+		if(this.includeAllScenes == true) {
+			return false;
+		} else {
+			for(var index = 0; index < this.includedScenes.length; index++) {
+				if(this.includedScenes == deviceAddress) {
+					return false;
+				}
 			}
+			return true;
 		}
-		if(rule.lastAddressDigit != "") {
-			if(deviceAddress.indexOf(rule.lastAddressDigit,deviceAddress.length-2) == -1) {
-				continue;
+	} else {
+		for (var index = 0; index < this.config.ignoreDevices.length; index++) {
+			var rule = this.config.ignoreDevices[index];
+			if (rule.nameContains != "") {
+				if (deviceName.indexOf(rule.nameContains) == -1) {
+					continue;
+				}
 			}
-		}
-		if(rule.address != "") {
-			if(deviceAddress != rule.address) {
-				continue;
-			} 
-		}
-		ISYJSDebugMessage("Ignoring device: "+deviceName+" ["+deviceAddress+"] because of rule ["+rule.nameContains+"] ["+rule.lastAddressDigit+"] ["+rule.address+"]");						
-		return true;
+			if (rule.lastAddressDigit != "") {
+				if (deviceAddress.indexOf(rule.lastAddressDigit, deviceAddress.length - 2) == -1) {
+					continue;
+				}
+			}
+			if (rule.address != "") {
+				if (deviceAddress != rule.address) {
+					continue;
+				}
+			}
+			ISYJSDebugMessage("Ignoring device: " + deviceName + " [" + deviceAddress + "] because of rule [" + rule.nameContains + "] [" + rule.lastAddressDigit + "] [" + rule.address + "]");
+			return true;
 
+		}
 	}
 	return false;	
 }
@@ -152,7 +173,9 @@ ISYPlatform.prototype.accessories = function(callback) {
 					homeKitDevice = new ISYElkAlarmPanelAccessory(that.log,device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_MOTION_SENSOR) {
                     homeKitDevice = new ISYMotionSensorAccessory(that.log,device);
-                }
+                } else if(device.deviceType == that.isy.DEVICE_TYPE_SCENE) {
+					homeKitDevice = new ISYLightAccessory(that.log,device);
+				}
 				if(homeKitDevice != null) {
 					// Make sure the device is address to the global map
 					deviceMap[device.address] = homeKitDevice;
@@ -484,7 +507,7 @@ ISYLockAccessory.prototype.getServices = function() {
 // Constructs the light accessory. log = homebridge logger, device = isy-js device object being wrapped
 function ISYLightAccessory(log,device) {
 	ISYAccessoryBaseSetup(this,log,device);
-	this.dimmable = (this.device.deviceType == "DimmableLight");
+	this.dimmable = (this.device.deviceType == "DimmableLight" || this.device.deviceType == "Scene");
 }
 
 // Handles the identify command
