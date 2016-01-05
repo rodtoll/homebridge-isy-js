@@ -431,23 +431,6 @@ describe('SCENE TESTS', function() {
             });
             done();
         });
-        it('Light switching on should update homebridge dimness state to 100', function (done) {
-            sendCommandAndCheckStateViaIsy(sampleScene, Characteristic.Brightness, 'sendLightCommand', true, 100, 1, done);
-        });
-        it('Light switching off should update homebridge dimness state to 0. Turn on then off to check', function (done) {
-            sendCommandAndCheckStateViaIsy(sampleScene, Characteristic.On, 'sendLightCommand', true, true, 2, function() {
-                sendCommandAndCheckStateViaIsy(sampleScene, Characteristic.Brightness, 'sendLightCommand', false, 0, 1, done);
-            });
-        });
-        it('Light switching on to 50% dim from off should update homebridge dimness state to 50', function (done) {
-            sendCommandAndCheckStateViaIsy(sampleScene, Characteristic.Brightness, 'sendLightDimCommand', 50, 50, 1, done);
-        });
-        it('Light switching on to 50% dim from off should update homebridge on state to on', function (done) {
-            sendCommandAndCheckStateViaIsy(sampleScene, Characteristic.On, 'sendLightDimCommand', 50, true, 2, done);
-        });
-        it('Light switching from 100% on to 50% dim from off should update homebridge dim state to 50', function (done) {
-            sendCommandAndCheckStateViaIsy(sampleScene, Characteristic.Brightness, 'sendLightDimCommand', 50, 50, 1, done);
-        });
     });
 
     describe('SCENE: Making direct changes changes the device', function() {
@@ -459,22 +442,6 @@ describe('SCENE TESTS', function() {
         it('Switching light on results in update to on state and then off to off state', function (done) {
             setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, true, 'getCurrentLightState', true, 2, function () {
                 setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, false, 'getCurrentLightState', false, 2, done)
-            });
-        });
-        it('Switching light to 50% results in update to on state to on', function (done) {
-            setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.Brightness, 50, 'getCurrentLightState', true, 2, done);
-        });
-        it('Switching light to 0% results in update to on state to off', function (done) {
-            setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, true, 'getCurrentLightState', true, 2, function() {
-                setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.Brightness, 0, 'getCurrentLightState', false, 2, done);
-            });
-        });
-        it('Switching light to 50% results in update to dim level to 50', function (done) {
-            setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.Brightness, 50, 'getCurrentLightDimState', 50, 2, done);
-        });
-        it('Switching light to 0% results in update to dim level to 0', function (done) {
-            setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, true, 'getCurrentLightState', true, 2, function() {
-                setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.Brightness, 0, 'getCurrentLightDimState', 0, 2, done);
             });
         });
     });

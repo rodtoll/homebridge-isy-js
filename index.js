@@ -507,7 +507,7 @@ ISYLockAccessory.prototype.getServices = function() {
 // Constructs the light accessory. log = homebridge logger, device = isy-js device object being wrapped
 function ISYLightAccessory(log,device) {
 	ISYAccessoryBaseSetup(this,log,device);
-	this.dimmable = (this.device.deviceType == "DimmableLight" || this.device.deviceType == "Scene");
+	this.dimmable = (this.device.deviceType == "DimmableLight");
 }
 
 // Handles the identify command
@@ -538,7 +538,7 @@ ISYLightAccessory.prototype.handleExternalChange = function() {
 	ISYJSDebugMessage("Handling external change for light");
 	this.lightService
 		.setCharacteristic(Characteristic.On, this.device.getCurrentLightState());
-	if(this.device.deviceType == this.device.isy.DEVICE_TYPE_DIMMABLE_LIGHT) {
+	if(this.dimmable) {
 		this.lightService
 			.setCharacteristic(Characteristic.Brightness, this.device.getCurrentLightDimState()	);
 	}
