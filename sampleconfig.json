@@ -16,6 +16,7 @@
             "username": "admin",
             "password": "<<PAssword>>",
             "elkEnabled": true,
+            "debugLoggingEnabled": false,
             "ignoreDevices": [
                 { "nameContains": "ApplianceLinc", "lastAddressDigit": "", "address": ""},
                 { "nameContains": "S -", "lastAddressDigit": "", "address": ""},                

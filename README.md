@@ -28,6 +28,7 @@ Configuration sample:
             "password": "password",   
             "elkEnabled": true,       
             "useHttps": false,
+            "debugLoggingEnabled": false,
             "includeAllScenes": false,
             "includedScenes": [
                 "27346"
@@ -50,6 +51,7 @@ Fields:
 * "password" - Your ISY password
 * "elkEnabled" - true if there is an elk alarm panel connected to your ISY
 * "useHttps" - true if you want to use a https connection to the ISY. Only use if you have HTTPS setup with a proper cert.
+* "debugLoggingEnabled" - true if you want debug logs to be dumped to the console.
 * "includeAllScenes" - true if you want the platform to expose all the scenes. Setups usually have a LOT of scenes any only 100 devices are supported from a bridge. It is recommended you proactively include the scenes you want in includedScenes.
 * "includedScenes" - An array of the addresses of the scenes you want to include as lighting devices.
 * "ignoreDevices" - Array of objects specifying criteria for screening out devices from the network. nameContains is the only required criteria. If the other criteri are blank all devices will match those criteria (providing they match the name criteria).

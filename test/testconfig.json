@@ -15,6 +15,7 @@
       "password": "password",
       "elkEnabled": true,
       "includeAllScenes": false,
+      "debugLoggingEnabled": false,
       "includedScenes": [
         "27346"
       ],
