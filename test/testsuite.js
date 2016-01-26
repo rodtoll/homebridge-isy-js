@@ -27,8 +27,8 @@ var sampleMotionSensor = '14 5C B2 1';
 var sampleScene = '27346';
 var sampleSceneDevices = ['18 12 18 1', '19 53 90 1'];
 
-var numExpectedDevices = 90;
-var numExpectedScenes = 1;
+var numExpectedDevices = 91;
+var numExpectedScenes = 2;
 var numExpectedLights = 42;
 var numExpectedLocks = 3;
 var numExpectedMotionSensors = 5;
@@ -52,7 +52,6 @@ describe('HomeBridge startup and device enumeration', function() {
     it('Basic startup should work and return the right type of devices', function (done) {
         var bridge = new FakeHomeBridge('./testconfig.json');
         bridge.startPlatform('../index.js', function () {
-            assert.equal(bridge.deviceList.length, numExpectedDevices, 'Did not get the expected number of devices');
             var lightCount = 0;
             var lockCount = 0;
             var motionCount = 0;
@@ -101,6 +100,8 @@ describe('HomeBridge startup and device enumeration', function() {
             assert.equal(alarmCount, numExpectedAlarmSystems, 'Should have expected count of alarms');
             assert.equal(motionCount, numExpectedMotionSensors, 'Should have expected count of motion sensors');
             assert.equal(sceneCount, numExpectedScenes, 'Should have expected number of scenes');
+            assert.equal(bridge.deviceList.length, numExpectedDevices, 'Did not get the expected number of devices');
+
             done();
         });
     });

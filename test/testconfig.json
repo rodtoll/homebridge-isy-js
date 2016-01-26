@@ -17,7 +17,8 @@
       "includeAllScenes": false,
       "debugLoggingEnabled": false,
       "includedScenes": [
-        "27346"
+        "27346",
+        "44909"
       ],
       "ignoreDevices": [
         {

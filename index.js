@@ -114,7 +114,7 @@ ISYPlatform.prototype.shouldIgnore = function(device) {
 			return false;
 		} else {
 			for(var index = 0; index < this.includedScenes.length; index++) {
-				if(this.includedScenes == deviceAddress) {
+				if(this.includedScenes[index] == deviceAddress) {
 					return false;
 				}
 			}
