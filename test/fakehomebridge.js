@@ -95,6 +95,12 @@ FakeHomeBridge.prototype.checkValidLight = function(device, isDimmable, name) {
     }
 }
 
+FakeHomeBridge.prototype.checkValidScene = function(scene,name) {
+    this.checkAccessoryService(scene,name);
+    var lightService = this.getServiceForDevice(scene, FakeService.Lightbulb);
+    assert(lightService != null, "Scene devices must have a lighting service. Device "+name+" doesn't");
+}
+
 FakeHomeBridge.prototype.checkValidLock = function(device, isDimmable, name) {
     this.checkAccessoryService(device,name);
     assert(this.getServiceForDevice(device, FakeService.LockMechanism) != null, "Lock devices must have a lock mechanism service. Device "+name+" doesn't");

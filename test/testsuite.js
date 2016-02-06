@@ -9,6 +9,7 @@ var ISYOutletAccessory = require('../index').ISYOutletAccessory;
 var ISYDoorWindowSensorAccessory = require('../index').ISYDoorWindowSensorAccessory;
 var ISYElkAlarmPanelAccessory = require('../index').ISYElkAlarmPanelAccessory;
 var ISYMotionSensorAccessory = require('../index').ISYMotionSensorAccessory;
+var ISYSceneAccessory = require('../index').ISYSceneAccessory;
 var restler = require('restler');
 
 var testServerAddress = '127.0.0.1:3000';
@@ -68,11 +69,10 @@ describe('HomeBridge startup and device enumeration', function() {
                     fanCount++;
                 } else if(device instanceof ISYLightAccessory) {
                     bridge.checkValidLight(device, device.device.dimmable, device.device.address);
-                    if(device.device.deviceType == 'Scene') {
-                        sceneCount++
-                    } else {
-                        lightCount++;
-                    }
+                    lightCount++;
+                } else if(device instanceof ISYSceneAccessory) {
+                    bridge.checkValidScene(device, device.device.address);
+                    sceneCount++
                 } else if(device instanceof ISYLockAccessory) {
                     bridge.checkValidLock(device, device.device.address);
                     lockCount++;
@@ -184,6 +184,7 @@ function setCharacteristicAndCheckResult(deviceAddress, service, char, stateToTr
         var realCallback = deviceToChange.device.isy.changeCallback;
         var callbacksReceived = 0;
         function interceptionCallback(isy,device) {
+            console.log('CALLBACK: Device: '+device.address);
             realCallback(isy,device);
             if(device.address == deviceToChange.device.address) {
                 callbacksReceived++;
@@ -442,7 +443,33 @@ describe('SCENE TESTS', function() {
         });
         it('Switching light on results in update to on state and then off to off state', function (done) {
             setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, true, 'getCurrentLightState', true, 2, function () {
-                setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, false, 'getCurrentLightState', false, 2, done)
+                setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, false, 'getCurrentLightState', false, 2, done);
+            });
+        });
+    });
+
+    describe('SCENE: Test on behavior - Only on if all devices are on', function() {
+        beforeEach(function (done) {
+            resetServerState(function () {
+                done();
+            });
+        });
+        it('Switching light on a single light in a scene doesnt change scene to on but switching all of them does', function (done) {
+            var bridge = new FakeHomeBridge('./testconfig.json');
+            bridge.startPlatform('../index.js', function () {
+                // Need to jump through hoops. Override current state of one of the lights so we can test partial state.
+                var deviceToSwitch = bridge.deviceList[0].device.isy.getDevice(sampleSceneDevices[0]);
+                deviceToSwitch.handleIsyUpdate(255);
+
+                var sceneToCheck = findDevice(bridge, sampleScene);
+                assert(!sceneToCheck.calculatePowerState(), "With only one device on this scene should be marked off");
+
+                deviceToSwitch = bridge.deviceList[0].device.isy.getDevice(sampleSceneDevices[1]);
+                deviceToSwitch.handleIsyUpdate(255);
+
+                assert(sceneToCheck.calculatePowerState(), "After tweaking both devices scene should be on");
+
+                done();
             });
         });
     });

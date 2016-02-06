@@ -66,3 +66,7 @@ Examples:
 { "nameContains": "Remote", "lastAddressDigit": "", "address": "" } - Ignore all devices which have the word Remote in their name
 { "nameContains": "", "lastAddressDigit": "", "address": "15 5 3 2"} - Ignore the device with an ISY address of 15 5 3 2.
 ```
+
+# Implementation Notes
+
+- Scenes will not show as on until all light devices are on. This allows the UI to send an 'on' request to light up the rest of them.

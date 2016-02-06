@@ -174,7 +174,7 @@ ISYPlatform.prototype.accessories = function(callback) {
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_MOTION_SENSOR) {
                     homeKitDevice = new ISYMotionSensorAccessory(that.logger,device);
                 } else if(device.deviceType == that.isy.DEVICE_TYPE_SCENE) {
-					homeKitDevice = new ISYLightAccessory(that.logger,device);
+					homeKitDevice = new ISYSceneAccessory(that.logger,device);
 				}
 				if(homeKitDevice != null) {
 					// Make sure the device is address to the global map
@@ -603,6 +603,82 @@ ISYLightAccessory.prototype.getServices = function() {
     return [informationService, lightBulbService];	
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// SCENES
+// Implements the Light service for homekit based on an underlying isy-js device. Is dimmable or not depending
+// on if the underlying device is dimmable.
+
+// Constructs the light accessory. log = homebridge logger, device = isy-js device object being wrapped
+function ISYSceneAccessory(log,device) {
+	ISYAccessoryBaseSetup(this,log,device);
+}
+
+// Handles the identify command
+ISYSceneAccessory.prototype.identify = function(callback) {
+	this.device.sendLightCommand(true, function(result) {
+		this.device.sendLightCommand(false, function(result) {
+			callback();
+		});
+	});
+}
+
+// Handles request to set the current powerstate from homekit. Will ignore redundant commands.
+ISYSceneAccessory.prototype.setPowerState = function(powerOn,callback) {
+	this.log("Setting powerstate to "+powerOn);
+	if(!this.device.getAreAllLightsInSpecifiedState(powerOn)) {
+		this.log("Changing powerstate to "+powerOn);
+		this.device.sendLightCommand(powerOn, function(result) {
+			callback();
+		});
+	} else {
+		this.log("Ignoring redundant setPowerState");
+		callback();
+	}
+}
+
+// Mirrors change in the state of the underlying isj-js device object.
+ISYSceneAccessory.prototype.handleExternalChange = function() {
+	this.log("Handling external change for light");
+    if(this.device.getAreAllLightsInSpecifiedState(true) || this.device.getAreAllLightsInSpecifiedState(false)) {
+        this.lightService
+            .setCharacteristic(Characteristic.On, this.device.getAreAllLightsInSpecifiedState(true));
+    }
+}
+
+ISYSceneAccessory.prototype.calculatePowerState = function() {
+    return this.device.getAreAllLightsInSpecifiedState(true);
+}
+
+// Handles request to get the current on state
+ISYSceneAccessory.prototype.getPowerState = function(callback) {
+	callback(null,this.calculatePowerState());
+}
+
+// Returns the set of services supported by this object.
+ISYSceneAccessory.prototype.getServices = function() {
+	var informationService = new Service.AccessoryInformation();
+
+	informationService
+		.setCharacteristic(Characteristic.Manufacturer, "SmartHome")
+		.setCharacteristic(Characteristic.Model, "Insteon Scene")
+		.setCharacteristic(Characteristic.SerialNumber, this.device.address);
+
+	var lightBulbService = new Service.Lightbulb();
+
+	this.informationService = informationService;
+	this.lightService = lightBulbService;
+
+	lightBulbService
+		.getCharacteristic(Characteristic.On)
+		.on('set', this.setPowerState.bind(this));
+
+	lightBulbService
+		.getCharacteristic(Characteristic.On)
+		.on('get', this.getPowerState.bind(this));
+
+	return [informationService, lightBulbService];
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // CONTACT SENSOR - ISYDoorWindowSensorAccessory
 // Implements the ContactSensor service.
@@ -845,5 +921,5 @@ module.exports.ISYOutletAccessory = ISYOutletAccessory;
 module.exports.ISYDoorWindowSensorAccessory = ISYDoorWindowSensorAccessory;
 module.exports.ISYMotionSensorAccessory = ISYMotionSensorAccessory;
 module.exports.ISYElkAlarmPanelAccessory = ISYElkAlarmPanelAccessory;
-
+module.exports.ISYSceneAccessory = ISYSceneAccessory;
 
