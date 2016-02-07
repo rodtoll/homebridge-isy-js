@@ -218,7 +218,13 @@ describe('LIGHT TESTS', function() {
             sendCommandAndCheckStateViaIsy(sampleDimmableLightWhichIsOff, Characteristic.Brightness, 'sendLightCommand', true, 100, 1, done);
         });
         it('Light switching off should update homebridge dimness state to 0', function (done) {
-            sendCommandAndCheckStateViaIsy(sampleDimmableLightWhichIsOn, Characteristic.Brightness, 'sendLightCommand', false, 0, 1, done);
+            sendCommandAndCheckStateViaIsy(sampleDimmableLightWhichIsOn, Characteristic.Brightness, 'sendLightCommand', 0, 0, 1, done);
+        });
+        it('Light switching off should update homebridge off state', function (done) {
+            sendCommandAndCheckStateViaIsy(sampleDimmableLightWhichIsOn, Characteristic.On, 'sendLightDimCommand', 0, false, 1, done);
+        });
+        it('Light switching to 0% should switch the light off', function (done) {
+            sendCommandAndCheckStateViaIsy(sampleDimmableLightWhichIsOn, Characteristic.Brightness, 'sendLightDimCommand', 0, 0, 1, done);
         });
         it('Light switching on to 50% dim from off should update homebridge dimness state to 50', function (done) {
             sendCommandAndCheckStateViaIsy(sampleDimmableLightWhichIsOff, Characteristic.Brightness, 'sendLightDimCommand', 50, 50, 1, done);

@@ -553,10 +553,17 @@ ISYLightAccessory.prototype.getPowerState = function(callback) {
 ISYLightAccessory.prototype.setBrightness = function(level,callback) {
 	this.log("Setting brightness to "+level);
 	if(level != this.device.getCurrentLightDimState()) {
-		this.log("Changing Brightness to "+level);
-		this.device.sendLightDimCommand(level, function(result) {
-			callback();			
-		});
+		if(level == 0) {
+			this.log("Brightness set to 0, sending off command");
+			this.device.sendLightCommand(false, function(result) {
+				callback();
+			});
+		} else {
+			this.log("Changing Brightness to "+level);
+			this.device.sendLightDimCommand(level, function(result) {
+				callback();
+			});
+		}
 	} else {
 		this.log("Ignoring redundant setBrightness");
 		callback();
