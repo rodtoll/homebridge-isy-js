@@ -221,6 +221,51 @@ SecuritySystemCurrentState.NIGHT_ARM = 2;
 SecuritySystemCurrentState.DISARMED = 3;
 SecuritySystemCurrentState.ALARM_TRIGGERED = 4;
 
+////////////////////////////////////////////////////////////////////////
+// CurrentDoorState
+
+function CurrentDoorState() {
+    EventEmitter.call(this);
+}
+
+CurrentDoorState.name = 'CurrentDoorState';
+
+util.inherits(CurrentDoorState, FakeCharacteristic);
+
+CurrentDoorState.OPEN = 0;
+CurrentDoorState.CLOSED = 1;
+CurrentDoorState.OPENING = 2;
+CurrentDoorState.CLOSING = 3;
+CurrentDoorState.STOPPED = 4;
+
+////////////////////////////////////////////////////////////////////////
+// TargetDoorState
+
+function TargetDoorState() {
+    EventEmitter.call(this);
+}
+
+TargetDoorState.name = 'TargetDoorState';
+
+util.inherits(TargetDoorState, FakeCharacteristic);
+
+TargetDoorState.OPEN = 0;
+TargetDoorState.CLOSED = 1;
+
+////////////////////////////////////////////////////////////////////////
+// ObstructionDetected
+
+function ObstructionDetected() {
+    EventEmitter.call(this);
+}
+
+ObstructionDetected.name = 'ObstructionDetected';
+
+util.inherits(ObstructionDetected, FakeCharacteristic);
+
+
+module.exports.CurrentDoorState = CurrentDoorState;
+module.exports.TargetDoorState = TargetDoorState;
 module.exports.FakeCharacteristic = FakeCharacteristic;
 module.exports.Manufacturer = Manufacturer;
 module.exports.Model = Model;
@@ -235,3 +280,4 @@ module.exports.ContactSensorState = ContactSensorState;
 module.exports.MotionDetected = MotionDetected;
 module.exports.SecuritySystemTargetState = SecuritySystemTargetState;
 module.exports.SecuritySystemCurrentState = SecuritySystemCurrentState;
+module.exports.ObstructionDetected = ObstructionDetected;

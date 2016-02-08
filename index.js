@@ -146,6 +146,18 @@ ISYPlatform.prototype.shouldIgnore = function(device) {
 	return false;	
 }
 
+ISYPlatform.prototype.getGarageEntry = function(address) {
+    var garageDoorList = this.config.garageDoors;
+    for(var index = 0; index < garageDoorList.length; index++) {
+        var garageEntry = garageDoorList[index];
+        if(garageEntry.address == address) {
+            return garageEntry;
+        }
+    }
+    return null;
+}
+
+
 // Calls the isy-js library, retrieves the list of devices, and maps them to appropriate ISYXXXXAccessory devices.
 ISYPlatform.prototype.accessories = function(callback) {
 	var that = this;
@@ -155,26 +167,31 @@ ISYPlatform.prototype.accessories = function(callback) {
 		for(var index = 0; index < deviceList.length; index++) {
 			var device = deviceList[index];
 			var homeKitDevice = null;
+            var garageInfo = that.getGarageEntry(device.address);
 			if(!that.shouldIgnore(device)) {
-				
-				if(device.deviceType == that.isy.DEVICE_TYPE_LIGHT || device.deviceType == that.isy.DEVICE_TYPE_DIMMABLE_LIGHT) {
-					homeKitDevice = new ISYLightAccessory(that.logger,device);
+                if(garageInfo != null) {
+                    var relayAddress = device.address.substr(0, device.address.length-1);
+                    relayAddress += '2';
+                    var relayDevice = that.isy.getDevice(relayAddress);
+                    homeKitDevice = new ISYGarageDoorAccessory(that.logger.bind(that),device, relayDevice, garageInfo.name, garageInfo.timeToOpen);
+                } else if(device.deviceType == that.isy.DEVICE_TYPE_LIGHT || device.deviceType == that.isy.DEVICE_TYPE_DIMMABLE_LIGHT) {
+					homeKitDevice = new ISYLightAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_LOCK || device.deviceType == that.isy.DEVICE_TYPE_SECURE_LOCK) {
-					homeKitDevice = new ISYLockAccessory(that.logger,device);
+					homeKitDevice = new ISYLockAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_OUTLET) {
-					homeKitDevice = new ISYOutletAccessory(that.logger,device);
+					homeKitDevice = new ISYOutletAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_FAN) {
-					homeKitDevice = new ISYFanAccessory(that.logger,device);
+					homeKitDevice = new ISYFanAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_DOOR_WINDOW_SENSOR) {
-					homeKitDevice = new ISYDoorWindowSensorAccessory(that.logger,device);
+					homeKitDevice = new ISYDoorWindowSensorAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_ALARM_DOOR_WINDOW_SENSOR) {
-					homeKitDevice = new ISYDoorWindowSensorAccessory(that.logger,device);
+					homeKitDevice = new ISYDoorWindowSensorAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_ALARM_PANEL) {
-					homeKitDevice = new ISYElkAlarmPanelAccessory(that.logger,device);
+					homeKitDevice = new ISYElkAlarmPanelAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_MOTION_SENSOR) {
-                    homeKitDevice = new ISYMotionSensorAccessory(that.logger,device);
+                    homeKitDevice = new ISYMotionSensorAccessory(that.logger.bind(that),device);
                 } else if(device.deviceType == that.isy.DEVICE_TYPE_SCENE) {
-					homeKitDevice = new ISYSceneAccessory(that.logger,device);
+					homeKitDevice = new ISYSceneAccessory(that.logger.bind(that),device);
 				}
 				if(homeKitDevice != null) {
 					// Make sure the device is address to the global map
@@ -920,6 +937,197 @@ ISYElkAlarmPanelAccessory.prototype.getServices = function() {
     return [informationService, alarmPanelService];	
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// LOCKS - ISYGarageDoorAccessory
+// Implements the lock service for isy-js devices.
+
+// Constructs a lock accessory. log = homebridge logger, device = isy-js device object being wrapped
+function ISYGarageDoorAccessory(log,sensorDevice,relayDevice,name,timeToOpen) {
+    ISYAccessoryBaseSetup(this,log,sensorDevice);
+    this.name = name;
+    this.timeToOpen = timeToOpen;
+    this.relayDevice = relayDevice;
+    if(sensorDevice.getCurrentDoorWindowState()) {
+        this.log("GARAGE: Initial set during startup the sensor is open so defaulting states to open");
+        this.targetGarageState = Characteristic.TargetDoorState.OPEN;
+        this.currentGarageState = Characteristic.CurrentDoorState.OPEN;
+    } else {
+        this.log("GARAGE: Initial set during startup the sensor is closed so defaulting states to closed");
+        this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
+        this.currentGarageState = Characteristic.CurrentDoorState.CLOSED;
+    }
+}
+
+// Handles an identify request
+ISYGarageDoorAccessory.prototype.identify = function(callback) {
+    callback();
+}
+
+ISYGarageDoorAccessory.prototype.sendGarageDoorCommand = function(callback) {
+    this.relayDevice.sendLightCommand(true, function() { callback(); });
+}
+
+// Handles a set to the target lock state. Will ignore redundant commands.
+ISYGarageDoorAccessory.prototype.setTargetDoorState = function(targetState,callback) {
+    var that = this;
+    if(targetState == this.targetGarageState) {
+        this.log("GARAGE: Ignoring redundant set of target state");
+        callback();
+        return;
+    }
+    this.targetGarageState = targetState;
+    if(this.currentGarageState == Characteristic.CurrentDoorState.OPEN) {
+        if(targetState == Characteristic.TargetDoorState.CLOSED) {
+            this.log("GARAGE: Current state is open and target is closed. Changing state to closing and sending command");
+            this.garageDoorService
+                .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSING);
+            this.sendGarageDoorCommand(callback);
+        }
+    } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSED) {
+        if(targetState == Characteristic.TargetDoorState.OPEN) {
+            this.log("GARAGE: Current state is closed and target is open. Waiting for sensor change to trigger opening state");
+            this.sendGarageDoorCommand(callback);
+            return;
+        }
+    } else if(this.currentGarageState == Characteristic.CurrentDoorState.OPENING) {
+        if(targetState == Characteristic.TargetDoorState.CLOSED) {
+            this.log("GARAGE: Current state is opening and target is closed. Sending command and changing state to closing");
+            this.garageDoorService
+                .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSING);
+            this.sendGarageDoorCommand(function() {
+                setTimeout(function() {
+                    that.sendGarageDoorCommand(callback);
+                }, 3000);
+            });
+            return;
+        }
+    } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSING) {
+        if(targetState == Characteristic.TargetDoorState.OPEN) {
+            this.log("GARAGE: Current state is closing and target is open. Sending command and setting timeout to complete");
+            this.garageDoorService
+                .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPENING);
+            this.sendGarageDoorCommand(function() {
+                setTimeout(that.sendGarageDoorCommand(callback),3000);
+                setTimeout(that.completeOpen.bind(that), that.timeToOpen);
+            });
+        }
+    }
+}
+
+// Handles request to get the current lock state for homekit
+ISYGarageDoorAccessory.prototype.getCurrentDoorState = function(callback) {
+    callback(null, this.currentGarageState);
+}
+
+ISYGarageDoorAccessory.prototype.setCurrentDoorState = function(newState,callback) {
+    this.currentGarageState = newState;
+    callback();
+}
+
+// Handles request to get the target lock state for homekit
+ISYGarageDoorAccessory.prototype.getTargetDoorState = function(callback) {
+    callback(null, this.targetGarageState);
+}
+
+ISYGarageDoorAccessory.prototype.completeOpen = function() {
+    if(this.currentGarageState == Characteristic.CurrentDoorState.OPENING) {
+        this.log("GARAGE: Current door has bee opening long enough, marking open");
+        this.garageDoorService
+            .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPEN);
+    } else {
+        this.log("GARAGE: Opening aborted so not setting opened state automatically");
+    }
+}
+
+// Mirrors change in the state of the underlying isj-js device object.
+ISYGarageDoorAccessory.prototype.handleExternalChange = function() {
+    // Handle startup.
+    if(this.device.getCurrentDoorWindowState()) {
+        if(this.currentGarageState == Characteristic.CurrentDoorState.OPEN) {
+            this.log("GARAGE: Current state of door is open and now sensor matches. No action to take");
+        } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSED) {
+            this.log("GARAGE: Current state of door is closed and now sensor says open. Setting state to opening");
+            this.garageDoorService
+                .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPENING);
+            this.targetGarageState = Characteristic.TargetDoorState.OPEN;
+            this.garageDoorService
+                .setCharacteristic(Characteristic.TargetDoorState, Characteristic.CurrentDoorState.OPEN);
+            setTimeout(this.completeOpen.bind(this), this.timeToOpen);
+        } else if(this.currentGarageState == Characteristic.CurrentDoorState.OPENING) {
+            this.log("GARAGE: Current state of door is opening and now sensor matches. No action to take");
+        } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSING) {
+            this.log("GARAGE: Current state of door is closing and now sensor matches. No action to take");
+        }
+    } else {
+        if(this.currentGarageState == Characteristic.CurrentDoorState.OPEN) {
+            this.log("GARAGE: Current state of door is open and now sensor shows closed. Setting current state to closed");
+            this.garageDoorService
+                .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
+            this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
+            this.garageDoorService
+                .setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
+        } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSED) {
+            this.log("GARAGE: Current state of door is closed and now sensor shows closed. No action to take");
+        } else if(this.currentGarageState == Characteristic.CurrentDoorState.OPENING) {
+            this.log("GARAGE: Current state of door is opening and now sensor shows closed. Setting current state to closed");
+            this.garageDoorService
+                .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
+            this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
+            this.garageDoorService
+                .setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
+        } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSING) {
+            this.log("GARAGE: Current state of door is closing and now sensor shows closed. Setting current state to closed");
+            this.garageDoorService
+                .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
+            this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
+            this.garageDoorService
+                .setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
+        }
+    }
+}
+
+ISYGarageDoorAccessory.prototype.getObstructionState = function(callback) {
+    callback(null,false);
+}
+
+// Returns the set of services supported by this object.
+ISYGarageDoorAccessory.prototype.getServices = function() {
+    var informationService = new Service.AccessoryInformation();
+
+    informationService
+        .setCharacteristic(Characteristic.Manufacturer, "SmartHome")
+        .setCharacteristic(Characteristic.Model, this.name)
+        .setCharacteristic(Characteristic.SerialNumber, this.device.address);
+
+    var garageDoorService = new Service.GarageDoorOpener();
+
+    this.garageDoorService = garageDoorService;
+    this.informationService = informationService;
+
+    garageDoorService
+        .getCharacteristic(Characteristic.TargetDoorState)
+        .on('set', this.setTargetDoorState.bind(this));
+
+    garageDoorService
+        .getCharacteristic(Characteristic.TargetDoorState)
+        .on('get', this.getTargetDoorState.bind(this));
+
+    garageDoorService
+        .getCharacteristic(Characteristic.CurrentDoorState)
+        .on('get', this.getCurrentDoorState.bind(this));
+
+    garageDoorService
+        .getCharacteristic(Characteristic.CurrentDoorState)
+        .on('set', this.setCurrentDoorState.bind(this));
+
+    garageDoorService
+        .getCharacteristic(Characteristic.ObstructionDetected)
+        .on('get', this.getObstructionState.bind(this));
+
+    return [informationService, garageDoorService];
+}
+
+
 module.exports.platform = ISYPlatform;
 module.exports.ISYFanAccessory = ISYFanAccessory;
 module.exports.ISYLightAccessory = ISYLightAccessory;
@@ -929,4 +1137,5 @@ module.exports.ISYDoorWindowSensorAccessory = ISYDoorWindowSensorAccessory;
 module.exports.ISYMotionSensorAccessory = ISYMotionSensorAccessory;
 module.exports.ISYElkAlarmPanelAccessory = ISYElkAlarmPanelAccessory;
 module.exports.ISYSceneAccessory = ISYSceneAccessory;
+module.exports.ISYGarageDoorAccessory = ISYGarageDoorAccessory;
 

@@ -20,6 +20,10 @@
         "27346",
         "44909"
       ],
+      "garageDoors": [
+        { "address": "17 79 81 1", "name": "Garage Door", "timeToOpen": 1000 },
+        { "address": "17 80 81 1", "name": "Garage Door-Open", "timeToOpen": 1000 }
+      ],
       "ignoreDevices": [
         {
           "nameContains": "S -",

@@ -203,7 +203,29 @@ SecuritySystem.prototype.setCharacteristic = function(char, value) {
     return this.setCharacteristicBase(char, value);
 }
 
+/////////////////////////////////////////
+// SecuritySystem
+function GarageDoorOpener( ) {
+    FakeService.call(this);
+    this.characteristics[Characteristic.CurrentDoorState.name] = new Characteristic.FakeCharacteristic(sourceHap,Characteristic.CurrentDoorState);
+    this.characteristics[Characteristic.TargetDoorState.name] = new Characteristic.FakeCharacteristic(sourceHap,Characteristic.TargetDoorState);
+    this.characteristics[Characteristic.ObstructionDetected.name] = new Characteristic.FakeCharacteristic(sourceHap,Characteristic.ObstructionDetected);
+}
 
+util.inherits(GarageDoorOpener, FakeService);
+
+GarageDoorOpener.prototype.setCharacteristic = function(char, value) {
+    if(char.name == Characteristic.CurrentDoorState) {
+        assert(isNumber(value), "Current door state must be a number");
+        assert(value >= 0 && value <= 4, "Current door state must be between 0 and 4");
+    } else if(char.name == Characteristic.TargetDoorState) {
+        assert(isNumber(value), "Target door state must be a number");
+        assert(value >= 0 && value <= 1, "Target door state must be between 0 and 4");
+    } else if(char.name == Characteristic.ObstructionDetected) {
+        assert(isBoolean(value), "Obstruction detected must be a boolean");
+    }
+    return this.setCharacteristicBase(char, value);
+}
 
 module.exports.setSourceHap = setSourceHap;
 module.exports.SecuritySystem = SecuritySystem;
@@ -214,3 +236,4 @@ module.exports.LockMechanism = LockMechanism;
 module.exports.Outlet = Outlet;
 module.exports.ContactSensor = ContactSensor;
 module.exports.Lightbulb = Lightbulb;
+module.exports.GarageDoorOpener = GarageDoorOpener;

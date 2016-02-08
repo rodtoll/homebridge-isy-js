@@ -10,6 +10,7 @@ var ISYDoorWindowSensorAccessory = require('../index').ISYDoorWindowSensorAccess
 var ISYElkAlarmPanelAccessory = require('../index').ISYElkAlarmPanelAccessory;
 var ISYMotionSensorAccessory = require('../index').ISYMotionSensorAccessory;
 var ISYSceneAccessory = require('../index').ISYSceneAccessory;
+var ISYGarageDoorAccessory = require('../index').ISYGarageDoorAccessory;
 var restler = require('restler');
 
 var testServerAddress = '127.0.0.1:3000';
@@ -25,10 +26,12 @@ var sampleFanOff = '14 A7 12 2';
 var sampleInsteonContactSensor = '14 47 41 1';
 var sampleOutlet = '1F 46 F0 1';
 var sampleMotionSensor = '14 5C B2 1';
+var sampleGarageDoorOpener = '17 79 81 1';
+var sampleGarageDoorOpenerOpen = '17 80 81 1';
 var sampleScene = '27346';
 var sampleSceneDevices = ['18 12 18 1', '19 53 90 1'];
 
-var numExpectedDevices = 91;
+var numExpectedDevices = 92;
 var numExpectedScenes = 2;
 var numExpectedLights = 42;
 var numExpectedLocks = 3;
@@ -36,7 +39,8 @@ var numExpectedMotionSensors = 5;
 var numExpectedAlarmSystems = 1;
 var numExpectedOutlets = 1;
 var numExpectedFans = 3;
-var numExpectedDoorWindowSensor = 34;
+var numExpectedDoorWindowSensor = 33;
+var numExpectedGarageDoorOpeners = 2;
 
 function findDevice(bridge, isyAddress) {
     for(var deviceIndex = 0; deviceIndex < bridge.deviceList.length; deviceIndex++) {
@@ -60,6 +64,7 @@ describe('HomeBridge startup and device enumeration', function() {
             var outletCount = 0;
             var fanCount = 0;
             var doorWindowCount = 0;
+            var garageDoorOpenerCount = 0;
             var sceneCount = 0;
             for(var deviceIndex = 0; deviceIndex < bridge.deviceList.length; deviceIndex++) {
                 var device = bridge.deviceList[deviceIndex];
@@ -88,6 +93,9 @@ describe('HomeBridge startup and device enumeration', function() {
                 } else if(device instanceof ISYMotionSensorAccessory) {
                     bridge.checkValidMotionSensor(device, device.device.address);
                     motionCount++;
+                } else if(device instanceof ISYGarageDoorAccessory) {
+                    bridge.checkValidGarageDoorOpener(device, device.device.address);
+                    garageDoorOpenerCount++;
                 } else {
                     assert(false, 'Found an unexpected device type');
                 }
@@ -100,6 +108,7 @@ describe('HomeBridge startup and device enumeration', function() {
             assert.equal(alarmCount, numExpectedAlarmSystems, 'Should have expected count of alarms');
             assert.equal(motionCount, numExpectedMotionSensors, 'Should have expected count of motion sensors');
             assert.equal(sceneCount, numExpectedScenes, 'Should have expected number of scenes');
+            assert.equal(garageDoorOpenerCount, numExpectedGarageDoorOpeners, 'Should have expected number of garage door openers');
             assert.equal(bridge.deviceList.length, numExpectedDevices, 'Did not get the expected number of devices');
 
             done();
@@ -476,6 +485,224 @@ describe('SCENE TESTS', function() {
                 assert(sceneToCheck.calculatePowerState(), "After tweaking both devices scene should be on");
 
                 done();
+            });
+        });
+    });
+});
+
+function setGarageState(bridge, address, current, target) {
+    var garageDevice = findDevice(bridge, address);
+    assert(garageDevice != null, "Should have a garage device.");
+    garageDevice.currentGarageState = current;
+    garageDevice.targetGarageState = target;
+}
+
+function setGarageDoorSensor(bridge, address, state, done) {
+    var sensorDevice = bridge.deviceList[0].device.isy.getDevice(address);
+    assert(sensorDevice != null, "Should have a garage sensor device.");
+    sensorDevice.sendLightCommand(state, done);
+}
+
+describe('GARAGE DOOR OPENER TESTS', function() {
+    describe('GARAGE DOOR OPENER: Device changes update homebridge', function() {
+        beforeEach(function (done) {
+            resetServerState(function () {
+                done();
+            });
+        });
+        it('GARAGE DOOR OPENER: Garage door is closed, starting an open remotely enters opening state and then gets to opened state', function (done) {
+            var bridge = new FakeHomeBridge('./testconfig.json');
+            bridge.startPlatform('../index.js', function () {
+                // Set the garage to closed state
+                setGarageState(bridge, sampleGarageDoorOpener, Characteristic.CurrentDoorState.CLOSED, Characteristic.TargetDoorState.CLOSED);
+                var callbackCount = 0;
+                bridge.notifyOfSet = function(characteristic) {
+                    if(callbackCount == 0) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "First change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPENING, "First change should be to the state of opening");
+                    } else if(callbackCount == 1) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Second change should be current state");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.OPEN, "Second change should be to the state of opening");
+                    } else if(callbackCount == 2) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Final change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPEN, "Final change should be to the state of open");
+                        done();
+                    }
+                    callbackCount++;
+                }
+
+                // Poke the sensor to make it look like door is opening
+                setGarageDoorSensor(bridge, sampleGarageDoorOpener, true, function() {});
+            });
+        });
+        it('GARAGE DOOR OPENER: Garage door is opened, starting a close enters closing state and then gets to closed state', function (done) {
+            var bridge = new FakeHomeBridge('./testconfig.json');
+            bridge.startPlatform('../index.js', function () {
+                // Set the garage to closed state
+                setGarageState(bridge, sampleGarageDoorOpenerOpen, Characteristic.CurrentDoorState.OPEN, Characteristic.TargetDoorState.OPEN);
+                var callbackCount = 0;
+                bridge.notifyOfSet = function(characteristic) {
+                    if(callbackCount == 0) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "First change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.CLOSED, "First change should be to the state of closing");
+                    } else if(callbackCount == 1) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Second change should be current state");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.CLOSED, "Second change should be to the state of opening");
+                        done();
+                    }
+                    callbackCount++;
+                }
+
+                // Poke the sensor to make it look like door is opening
+                setTimeout(function() {
+                    setGarageDoorSensor(bridge, sampleGarageDoorOpenerOpen, false, function () {});
+                }, 500);
+            });
+        });
+    });
+    describe('GARAGE DOOR OPENER: Commanding the device makes changes', function() {
+        beforeEach(function (done) {
+            resetServerState(function () {
+                done();
+            });
+        });
+        it('GARAGE DOOR OPENER: Garage door is closed, start an open and the state enters opening and transitions to open', function (done) {
+            var bridge = new FakeHomeBridge('./testconfig.json');
+            bridge.startPlatform('../index.js', function () {
+                var callbackCount = 0;
+                bridge.notifyOfSet = function(characteristic) {
+                    if(callbackCount == 0) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "First change should be target state");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.OPEN, "First change should be to the state of open");
+                    } else if(callbackCount == 1) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Second change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPENING, "Second change should be to the state of opening");
+                    } else if(callbackCount == 2) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Third change should be target state and be redundant (from change notification from is)");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.OPEN, "Third change should be to the state of open and be redundant  (from change notification from is)");
+                    } else if(callbackCount == 3) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Final change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPEN, "Final change should be to the state of open");
+                        done();
+                    }
+                    callbackCount++;
+                }
+
+                var garageDevice = findDevice(bridge, sampleGarageDoorOpener);
+                garageDevice.garageDoorService.setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.OPEN);
+                // This should happen if the command worked so we need to simulate it.
+                setGarageDoorSensor(bridge, sampleGarageDoorOpener, true, function () {});
+            });
+        });
+        it('GARAGE DOOR OPENER: Garage door is open, start a close and the state enters closing and transitions to closed', function (done) {
+            var bridge = new FakeHomeBridge('./testconfig.json');
+            bridge.startPlatform('../index.js', function () {
+                var callbackCount = 0;
+                var garageDevice = findDevice(bridge, sampleGarageDoorOpenerOpen);
+                garageDevice.timeToOpen = 10000;
+                bridge.notifyOfSet = function(characteristic) {
+                    if(callbackCount == 0) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "First change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.CLOSING, "First change should be to the state of closing");
+                    } else if(callbackCount == 1) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Second change should be target state");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.CLOSED, "Second change should be to the state of closed");
+                    } else if(callbackCount == 2) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Third change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.CLOSED, "Third change should be to the state of open");
+                    } else if(callbackCount == 3) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Final change should be target state and be redundant (from change notification from is)");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.CLOSED, "Final change should be to the state of open and be redundant  (from change notification from is)");
+                        done();
+                    }
+                    callbackCount++;
+                }
+
+                garageDevice.garageDoorService.setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
+                // This should happen if the command worked so we need to simulate it.
+                // Poke the sensor to make it look like door is opening
+                setTimeout(function() {
+                    setGarageDoorSensor(bridge, sampleGarageDoorOpenerOpen, false, function () {});
+                }, 1000);
+            });
+        });
+        it('GARAGE DOOR OPENER: Garage door is open, start a close and then do an open. State enters closing and transitions to opening and then open', function (done) {
+            var bridge = new FakeHomeBridge('./testconfig.json');
+            bridge.startPlatform('../index.js', function () {
+                var callbackCount = 0;
+                var garageDevice = findDevice(bridge, sampleGarageDoorOpenerOpen);
+                garageDevice.timeToOpen = 1000;
+                bridge.notifyOfSet = function(characteristic) {
+                    if(callbackCount == 0) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "First change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.CLOSING, "First change should be to the state of closing");
+                    } else if(callbackCount == 1) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Second change should be target state");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.CLOSED, "Second change should be to the state of closed");
+                    } else if(callbackCount == 2) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Third change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPENING, "Third change should be to the state of open");
+                    } else if(callbackCount == 3) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Fourth change should be target state and be redundant (from change notification from is)");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.OPEN, "Fourth change should be to the state of open and be redundant  (from change notification from is)");
+                    } else if(callbackCount == 4) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Final change should be current state and should be open");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPEN, "Final change should be current state and should be open");
+                        done();
+                    }
+                    callbackCount++;
+                }
+
+                garageDevice.garageDoorService.setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
+                // This should happen if the command worked so we need to simulate it.
+                // Poke the sensor to make it look like door is opening
+                setTimeout(function() {
+                    garageDevice.garageDoorService.setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.OPEN);
+                }, 500);
+            });
+        });
+        it('GARAGE DOOR OPENER: Garage door is closed, start an open and then do a close. State enters opening and transitions to closing and then to closed', function (done) {
+            var bridge = new FakeHomeBridge('./testconfig.json');
+            bridge.startPlatform('../index.js', function () {
+                var callbackCount = 0;
+                var garageDevice = findDevice(bridge, sampleGarageDoorOpenerOpen);
+                garageDevice.timeToOpen = 12000;
+                bridge.notifyOfSet = function(characteristic) {
+                    if(callbackCount == 0) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "First change should be target state");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.OPEN, "First change should be to the state of open");
+                        setGarageDoorSensor(bridge, sampleGarageDoorOpener, true, function () {});
+                    } else if(callbackCount == 1) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Second change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPENING, "Second change should be to the state of opening");
+                    } else if(callbackCount == 2) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Third change should be target state and be redundant (from change notification from is)");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.OPEN, "Third change should be to the state of open and be redundant  (from change notification from is)");
+                    } else if(callbackCount == 3) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Fourth change should be current state");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.CLOSING, "Fourth change should be to the state of closing");
+                    } else if(callbackCount == 4) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Fifth change should be target state)");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.CLOSED, "Fifth change should be to the state of closed");
+                    } else if(callbackCount == 5) {
+                        assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Final change should be current state and should be closed");
+                        assert.equal(characteristic.value, Characteristic.CurrentDoorState.CLOSED, "Final change should be current state and should be closed");
+                        done();
+                    }
+                    callbackCount++;
+                }
+
+                garageDevice.garageDoorService.setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.OPEN);
+                setGarageDoorSensor(bridge, sampleGarageDoorOpener, true, function () {});
+
+                // This should happen if the command worked so we need to simulate it.
+                // Poke the sensor to make it look like door is opening
+                setTimeout(function() {
+                    garageDevice.garageDoorService.setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
+                    setTimeout(function() {
+                        setGarageDoorSensor(bridge, sampleGarageDoorOpener, false, function () {});
+                    }, 250);
+                }, 250);
             });
         });
     });

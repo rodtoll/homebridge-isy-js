@@ -95,6 +95,11 @@ FakeHomeBridge.prototype.checkValidLight = function(device, isDimmable, name) {
     }
 }
 
+FakeHomeBridge.prototype.checkValidGarageDoorOpener = function(device,name) {
+    this.checkAccessoryService(device,name);
+    var garageService = this.getServiceForDevice(device, FakeService.GarageDoorOpener);
+}
+
 FakeHomeBridge.prototype.checkValidScene = function(scene,name) {
     this.checkAccessoryService(scene,name);
     var lightService = this.getServiceForDevice(scene, FakeService.Lightbulb);
