@@ -1,61 +1,7 @@
 /*
  ISY-JS
  
- ISY-99 REST / WebSockets based HomeBridge shim. 
- 
- Supports the following Insteon devices: Lights (dimmable and non-dimmable), Fans, Outlets, Door/Window Sensors, MorningLinc locks, Inline Lincs and I/O Lincs.
- Also supports ZWave based locks. If elkEnabled is set to true then this will also expose your Elk Alarm Panel and all of your Elk Sensors. 
- 
- Turns out that HomeBridge platforms can only return a maximum of 100 devices. So if you end up exposing more then 100 devices through HomeBridge the HomeKit
- software will fail adding the HomeBridge to your HomeKit network. To address this issue this platform provides an option to screen out devices based on 
- criteria specified in the config. 
-
- Configuration sample:
- 
-     "platforms": [
-        {
-            "platform": "isy-js",
-            "name": "isy-js",         
-            "host": "10.0.1.12",      
-            "username": "admin",      
-            "password": "password",   
-            "elkEnabled": true,
-            "includeAllScenes": false,
-            "includedScenes": [
-            	"44909"
-            ],
-            "ignoreDevices": [        
-                { "nameContains": "ApplianceLinc", "lastAddressDigit": "", "address": ""},
-                { "nameContains": "Bedroom.Side Gate", "lastAddressDigit": "", "address": ""},
-                { "nameContains": "Remote", "lastAddressDigit": "", "address": "" },    
-                { "nameContains": "Keypad", "lastAddressDigit": "2", "address": "" },
-            ]
-        }
-     ]
-
- Fields: 
- "platform" - Must be set to isy-js
- "name" - Can be set to whatever you want
- "host" - IP address of the ISY
- "username" - Your ISY username
- "password" - Your ISY password
- "elkEnabled" - true if there is an elk alarm panel connected to your ISY
- "includeAllScenes" - Should all scenes be included and enumerated? true enables all scenes, false enables only those identified in includedScenes section
- "includedScenes" - List of scenes to include
- "ignoreDevices" - Array of objects specifying criteria for screening out devices from the network. nameContains is the only required criteria. If the other criteria
-                   are blank all devices will match those criteria (providing they match the name criteria).
-		"nameContains" - Specifies a substring to check against the names of the ISY devices. Required field for the criteria.
-		"lastAddressDigit" - Specifies a single digit in the ISY address of a device which should be used to match the device. Example use of this is for composite 
-		                     devices like keypads so you can screen out the non-main buttons. 
-	    "address" - ISY address to match.		   
-         
-		Examples:
-		
-		{ "nameContains": "Keypad", "lastAddressDigit": "2", "address": "" } - Ignore all devices which have the word Keypad in their name and whose last address digit is 2.
-		{ "nameContains": "Remote", "lastAddressDigit": "", "address": "" } - Ignore all devices which have the word Remote in their name
-		{ "nameContains": "", "lastAddressDigit": "", "address": "15 5 3 2"} - Ignore the device with an ISY address of 15 5 3 2.
-		
- TODOS: Implement identify functions (beep perhaps?) and more device types.
+ See README.md for details.
 */
 
 var Service, Characteristic, types;
@@ -101,7 +47,8 @@ function ISYPlatform(log,config) {
 
 ISYPlatform.prototype.logger = function(msg) {
 	if(this.debugLoggingEnabled || (process.env.ISYJSDEBUG != undefined && process.env.IYJSDEBUG != null)) {
-		this.log(msg);
+        var timeStamp = new Date();
+		this.log(timeStamp.getYear()+"-"+timeStamp.getMonth()+"-"+timeStamp.getDay()+"#"+timeStamp.getHours()+":"+timeStamp.getMinutes()+":"+timeStamp.getSeconds()+"- "+msg);
 	}
 }
 
@@ -138,7 +85,7 @@ ISYPlatform.prototype.shouldIgnore = function(device) {
 					continue;
 				}
 			}
-			this.logger("Ignoring device: " + deviceName + " [" + deviceAddress + "] because of rule [" + rule.nameContains + "] [" + rule.lastAddressDigit + "] [" + rule.address + "]");
+			this.logger("ISYPLATFORM: Ignoring device: " + deviceName + " [" + deviceAddress + "] because of rule [" + rule.nameContains + "] [" + rule.lastAddressDigit + "] [" + rule.address + "]");
 			return true;
 
 		}
@@ -148,10 +95,12 @@ ISYPlatform.prototype.shouldIgnore = function(device) {
 
 ISYPlatform.prototype.getGarageEntry = function(address) {
     var garageDoorList = this.config.garageDoors;
-    for(var index = 0; index < garageDoorList.length; index++) {
-        var garageEntry = garageDoorList[index];
-        if(garageEntry.address == address) {
-            return garageEntry;
+    if(garageDoorList != undefined) {
+        for (var index = 0; index < garageDoorList.length; index++) {
+            var garageEntry = garageDoorList[index];
+            if (garageEntry.address == address) {
+                return garageEntry;
+            }
         }
     }
     return null;
@@ -206,7 +155,7 @@ ISYPlatform.prototype.accessories = function(callback) {
 			deviceMap[panelDevice.address] = panelDeviceHK;
 			results.push(panelDeviceHK);
 		}
-		that.logger("Filtered device has: "+results.length+" devices");
+		that.logger("ISYPLATFORM: Filtered device has: "+results.length+" devices");
 		callback(results);		
 	});
 }
@@ -250,7 +199,7 @@ ISYFanAccessory.prototype.translateFanSpeedToHK = function(fanSpeed) {
 	} else if(fanSpeed == this.device.FAN_LEVEL_HIGH) {
 		return 100;
 	} else {
-		this.log("!!!! ERROR: Unknown fan speed: "+fanSpeed);
+		this.log("FAN: "+this.device.name+" !!!! ERROR: Unknown fan speed: "+fanSpeed);
 		return 0;
 	}
 }
@@ -267,35 +216,35 @@ ISYFanAccessory.prototype.translateHKToFanSpeed = function(fanStateHK) {
 	} else if(fanStateHK > 67) {
 		return this.device.FAN_LEVEL_HIGH;
 	} else {
-		this.log("ERROR: Unknown fan state!");
+		this.log("FAN: "+this.device.name+" ERROR: Unknown fan state!");
 		return this.device.FAN_OFF;
 	}
 }
 
 // Returns the current state of the fan from the isy-js level to the 0-100 level of HK.
 ISYFanAccessory.prototype.getFanRotationSpeed = function(callback) {
-	this.log( "Getting fan rotation speed. Device says: "+this.device.getCurrentFanState()+" translation says: "+this.translateFanSpeedToHK(this.device.getCurrentFanState()))
+	this.log( "FAN: "+this.device.name+" Getting fan rotation speed. Device says: "+this.device.getCurrentFanState()+" translation says: "+this.translateFanSpeedToHK(this.device.getCurrentFanState()))
 	callback(null,this.translateFanSpeedToHK(this.device.getCurrentFanState()));
 }
 
 // Sets the current state of the fan from the 0-100 level of HK to the isy-js level.
 ISYFanAccessory.prototype.setFanRotationSpeed = function(fanStateHK,callback) {
-	this.log( "Sending command to set fan state(pre-translate) to: "+fanStateHK);
+	this.log( "FAN: "+this.device.name+" Sending command to set fan state(pre-translate) to: "+fanStateHK);
 	var newFanState = this.translateHKToFanSpeed(fanStateHK);
-	this.log("Sending command to set fan state to: "+newFanState);
+	this.log("FAN: "+this.device.name+" Sending command to set fan state to: "+newFanState);
 	if(newFanState != this.device.getCurrentFanState()) {
 		this.device.sendFanCommand(newFanState, function(result) {
 			callback();		
 		});
 	} else {
-		this.log("Fan command does not change actual speed");
+		this.log("FAN: "+this.device.name+" Fan command does not change actual speed");
 		callback();
 	}
 }
 
 // Returns true if the fan is on
 ISYFanAccessory.prototype.getIsFanOn = function() {
-	this.log( "Getting fan is on. Device says: "+this.device.getCurrentFanState()+" Code says: "+(this.device.getCurrentFanState() != "Off"));
+	this.log( "FAN: "+this.device.name+" Getting fan is on. Device says: "+this.device.getCurrentFanState()+" Code says: "+(this.device.getCurrentFanState() != "Off"));
 	return (this.device.getCurrentFanState() != "Off");
 }
 
@@ -306,24 +255,24 @@ ISYFanAccessory.prototype.getFanOnState = function(callback) {
 
 // Sets the fan state based on the value of the On characteristic. Default to Medium for on. 
 ISYFanAccessory.prototype.setFanOnState = function(onState,callback) {
-	this.log( "Setting fan on state to: "+onState+" Device says: "+this.device.getCurrentFanState());
+	this.log( "FAN: "+this.device.name+" Setting fan on state to: "+onState+" Device says: "+this.device.getCurrentFanState());
 	if(onState != this.getIsFanOn()) {
 		if(onState) {
-			this.log( "Setting fan speed to medium");
+			this.log( "FAN: "+this.device.name+" Setting fan speed to medium");
 			this.setFanRotationSpeed(this.translateFanSpeedToHK(this.device.FAN_LEVEL_MEDIUM), callback);
 		} else {
-			this.log( "Setting fan speed to off");
+			this.log( "FAN: "+this.device.name+" Setting fan speed to off");
 			this.setFanRotationSpeed(this.translateFanSpeedToHK(this.device.FAN_OFF), callback);
 		}
 	} else {
-		this.log("Fan command does not change actual state");
+		this.log("FAN: "+this.device.name+" Fan command does not change actual state");
 		callback();
 	} 
 }
 
 // Mirrors change in the state of the underlying isj-js device object.
 ISYFanAccessory.prototype.handleExternalChange = function() {
-	this.log( "Incoming external change. Device says: "+this.device.getCurrentFanState());
+	this.log( "FAN: "+this.device.name+" Incoming external change. Device says: "+this.device.getCurrentFanState());
 	this.fanService
 		.setCharacteristic(Characteristic.On, this.getIsFanOn());
 		
@@ -381,7 +330,7 @@ ISYOutletAccessory.prototype.identify = function(callback) {
 
 // Handles a request to set the outlet state. Ignores redundant sets based on current states.
 ISYOutletAccessory.prototype.setOutletState = function(outletState,callback) {
-	this.log("Sending command to set outlet state to: "+outletState);
+	this.log("OUTLET: "+this.device.name+" Sending command to set outlet state to: "+outletState);
 	if(outletState != this.device.getCurrentOutletState()) {
 		this.device.sendOutletCommand(outletState, function(result) {
 			callback();		
@@ -453,7 +402,7 @@ ISYLockAccessory.prototype.identify = function(callback) {
 
 // Handles a set to the target lock state. Will ignore redundant commands.
 ISYLockAccessory.prototype.setTargetLockState = function(lockState,callback) {
-	this.log(this,"Sending command to set lock state to: "+lockState);
+	this.log(this,"LOCK: "+this.device.name+" Sending command to set lock state to: "+lockState);
 	if(lockState != this.getDeviceCurrentStateAsHK()) {
 		var targetLockValue = (lockState == 0) ? false : true;
 		this.device.sendLockCommand(targetLockValue, function(result) {
@@ -538,21 +487,21 @@ ISYLightAccessory.prototype.identify = function(callback) {
 
 // Handles request to set the current powerstate from homekit. Will ignore redundant commands. 
 ISYLightAccessory.prototype.setPowerState = function(powerOn,callback) {
-	this.log("Setting powerstate to "+powerOn);
+	this.log("LIGHT: "+this.device.name+" Setting powerstate to "+powerOn);
 	if(powerOn != this.device.getCurrentLightState()) {
-		this.log("Changing powerstate to "+powerOn);
+		this.log("LIGHT: "+this.device.name+" Changing powerstate to "+powerOn);
 		this.device.sendLightCommand(powerOn, function(result) {
 			callback();
 		});
 	} else {
-		this.log("Ignoring redundant setPowerState");
+		this.log("LIGHT: "+this.device.name+" Ignoring redundant setPowerState");
 		callback();
 	}
 }
 
 // Mirrors change in the state of the underlying isj-js device object.
 ISYLightAccessory.prototype.handleExternalChange = function() {
-	this.log("Handling external change for light");
+	this.log("LIGHT: "+this.device.name+" Handling external change for light");
 	this.lightService
 		.setCharacteristic(Characteristic.On, this.device.getCurrentLightState());
 	if(this.dimmable) {
@@ -568,21 +517,21 @@ ISYLightAccessory.prototype.getPowerState = function(callback) {
 
 // Handles request to set the brightness level of dimmable lights. Ignore redundant commands. 
 ISYLightAccessory.prototype.setBrightness = function(level,callback) {
-	this.log("Setting brightness to "+level);
+	this.log("LIGHT: "+this.device.name+" Setting brightness to "+level);
 	if(level != this.device.getCurrentLightDimState()) {
 		if(level == 0) {
-			this.log("Brightness set to 0, sending off command");
+			this.log("LIGHT: "+this.device.name+" Brightness set to 0, sending off command");
 			this.device.sendLightCommand(false, function(result) {
 				callback();
 			});
 		} else {
-			this.log("Changing Brightness to "+level);
+			this.log("LIGHT: "+this.device.name+" Changing Brightness to "+level);
 			this.device.sendLightDimCommand(level, function(result) {
 				callback();
 			});
 		}
 	} else {
-		this.log("Ignoring redundant setBrightness");
+		this.log("LIGHT: "+this.device.name+" Ignoring redundant setBrightness");
 		callback();
 	}
 }
@@ -648,21 +597,21 @@ ISYSceneAccessory.prototype.identify = function(callback) {
 
 // Handles request to set the current powerstate from homekit. Will ignore redundant commands.
 ISYSceneAccessory.prototype.setPowerState = function(powerOn,callback) {
-	this.log("Setting powerstate to "+powerOn);
+	this.log("SCENE: "+this.device.name+" Setting powerstate to "+powerOn);
 	if(!this.device.getAreAllLightsInSpecifiedState(powerOn)) {
-		this.log("Changing powerstate to "+powerOn);
+		this.log("SCENE: "+this.device.name+" Changing powerstate to "+powerOn);
 		this.device.sendLightCommand(powerOn, function(result) {
 			callback();
 		});
 	} else {
-		this.log("Ignoring redundant setPowerState");
+		this.log("SCENE: "+this.device.name+" Ignoring redundant setPowerState");
 		callback();
 	}
 }
 
 // Mirrors change in the state of the underlying isj-js device object.
 ISYSceneAccessory.prototype.handleExternalChange = function() {
-	this.log("Handling external change for light");
+	this.log("SCENE: "+this.device.name+" Handling external change for light");
     if(this.device.getAreAllLightsInSpecifiedState(true) || this.device.getAreAllLightsInSpecifiedState(false)) {
         this.lightService
             .setCharacteristic(Characteristic.On, this.device.getAreAllLightsInSpecifiedState(true));
@@ -819,15 +768,15 @@ ISYElkAlarmPanelAccessory.prototype.identify = function(callback) {
 
 // Handles the request to set the alarm target state
 ISYElkAlarmPanelAccessory.prototype.setAlarmTargetState = function(targetStateHK,callback) {
-	this.log("Sending command to set alarm panel state to: "+targetStateHK);
+	this.log("ALARMSYSTEM: "+this.device.name+"Sending command to set alarm panel state to: "+targetStateHK);
 	var targetState = this.translateHKToAlarmTargetState(targetStateHK);
-	this.log("Would send the target state of: "+targetState);
+	this.log("ALARMSYSTEM: "+this.device.name+" Would send the target state of: "+targetState);
 	if(this.device.getAlarmMode() != targetState) {
 		this.device.sendSetAlarmModeCommand(targetState, function(result) {
 			callback();		
 		});
 	} else {
-		this.log("Redundant command, already in that state.");
+		this.log("ALARMSYSTEM: "+this.device.name+" Redundant command, already in that state.");
 		callback();
 	}
 }
@@ -855,7 +804,7 @@ ISYElkAlarmPanelAccessory.prototype.translateAlarmCurrentStateToHK = function() 
 		} else if(sourceAlarmMode == this.device.ALARM_MODE_NIGHT || sourceAlarmMode == this.device.ALARM_MODE_NIGHT_INSTANT) {
 			return Characteristic.SecuritySystemCurrentState.NIGHT_ARM;
 		} else {
-			this.log("Setting to disarmed because sourceAlarmMode is "+sourceAlarmMode);
+			this.log("ALARMSYSTEM: "+this.device.name+" Setting to disarmed because sourceAlarmMode is "+sourceAlarmMode);
 			return Characteristic.SecuritySystemCurrentState.DISARMED;
 		}
 	}
@@ -900,8 +849,8 @@ ISYElkAlarmPanelAccessory.prototype.getAlarmCurrentState = function(callback) {
 
 // Mirrors change in the state of the underlying isj-js device object.
 ISYElkAlarmPanelAccessory.prototype.handleExternalChange = function() {
-	this.log("Source device. Currenty state locally -"+this.device.getAlarmStatusAsText());
-	this.log("Got alarm change notification. Setting HK target state to: "+this.translateAlarmTargetStateToHK()+" Setting HK Current state to: "+this.translateAlarmCurrentStateToHK());
+	this.log("ALARMPANEL: "+this.device.name+" Source device. Currenty state locally -"+this.device.getAlarmStatusAsText());
+	this.log("ALARMPANEL: "+this.device.name+" Got alarm change notification. Setting HK target state to: "+this.translateAlarmTargetStateToHK()+" Setting HK Current state to: "+this.translateAlarmCurrentStateToHK());
 	this.alarmPanelService
 		.setCharacteristic(Characteristic.SecuritySystemTargetState, this.translateAlarmTargetStateToHK());
 	this.alarmPanelService
@@ -978,20 +927,20 @@ ISYGarageDoorAccessory.prototype.setTargetDoorState = function(targetState,callb
     this.targetGarageState = targetState;
     if(this.currentGarageState == Characteristic.CurrentDoorState.OPEN) {
         if(targetState == Characteristic.TargetDoorState.CLOSED) {
-            this.log("GARAGE: Current state is open and target is closed. Changing state to closing and sending command");
+            this.log("GARAGE: "+this.device.name+" Current state is open and target is closed. Changing state to closing and sending command");
             this.garageDoorService
                 .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSING);
             this.sendGarageDoorCommand(callback);
         }
     } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSED) {
         if(targetState == Characteristic.TargetDoorState.OPEN) {
-            this.log("GARAGE: Current state is closed and target is open. Waiting for sensor change to trigger opening state");
+            this.log("GARAGE: "+this.device.name+" Current state is closed and target is open. Waiting for sensor change to trigger opening state");
             this.sendGarageDoorCommand(callback);
             return;
         }
     } else if(this.currentGarageState == Characteristic.CurrentDoorState.OPENING) {
         if(targetState == Characteristic.TargetDoorState.CLOSED) {
-            this.log("GARAGE: Current state is opening and target is closed. Sending command and changing state to closing");
+            this.log("GARAGE: "+this.device.name+" Current state is opening and target is closed. Sending command and changing state to closing");
             this.garageDoorService
                 .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSING);
             this.sendGarageDoorCommand(function() {
@@ -1003,7 +952,7 @@ ISYGarageDoorAccessory.prototype.setTargetDoorState = function(targetState,callb
         }
     } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSING) {
         if(targetState == Characteristic.TargetDoorState.OPEN) {
-            this.log("GARAGE: Current state is closing and target is open. Sending command and setting timeout to complete");
+            this.log("GARAGE: "+this.device.name+" Current state is closing and target is open. Sending command and setting timeout to complete");
             this.garageDoorService
                 .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPENING);
             this.sendGarageDoorCommand(function() {
@@ -1031,11 +980,11 @@ ISYGarageDoorAccessory.prototype.getTargetDoorState = function(callback) {
 
 ISYGarageDoorAccessory.prototype.completeOpen = function() {
     if(this.currentGarageState == Characteristic.CurrentDoorState.OPENING) {
-        this.log("GARAGE: Current door has bee opening long enough, marking open");
+        this.log("GARAGE:  "+this.device.name+"Current door has bee opening long enough, marking open");
         this.garageDoorService
             .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPEN);
     } else {
-        this.log("GARAGE: Opening aborted so not setting opened state automatically");
+        this.log("GARAGE:  "+this.device.name+"Opening aborted so not setting opened state automatically");
     }
 }
 
@@ -1044,9 +993,9 @@ ISYGarageDoorAccessory.prototype.handleExternalChange = function() {
     // Handle startup.
     if(this.device.getCurrentDoorWindowState()) {
         if(this.currentGarageState == Characteristic.CurrentDoorState.OPEN) {
-            this.log("GARAGE: Current state of door is open and now sensor matches. No action to take");
+            this.log("GARAGE:  "+this.device.name+"Current state of door is open and now sensor matches. No action to take");
         } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSED) {
-            this.log("GARAGE: Current state of door is closed and now sensor says open. Setting state to opening");
+            this.log("GARAGE:  "+this.device.name+"Current state of door is closed and now sensor says open. Setting state to opening");
             this.garageDoorService
                 .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPENING);
             this.targetGarageState = Characteristic.TargetDoorState.OPEN;
@@ -1054,29 +1003,29 @@ ISYGarageDoorAccessory.prototype.handleExternalChange = function() {
                 .setCharacteristic(Characteristic.TargetDoorState, Characteristic.CurrentDoorState.OPEN);
             setTimeout(this.completeOpen.bind(this), this.timeToOpen);
         } else if(this.currentGarageState == Characteristic.CurrentDoorState.OPENING) {
-            this.log("GARAGE: Current state of door is opening and now sensor matches. No action to take");
+            this.log("GARAGE:  "+this.device.name+"Current state of door is opening and now sensor matches. No action to take");
         } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSING) {
-            this.log("GARAGE: Current state of door is closing and now sensor matches. No action to take");
+            this.log("GARAGE: C "+this.device.name+"urrent state of door is closing and now sensor matches. No action to take");
         }
     } else {
         if(this.currentGarageState == Characteristic.CurrentDoorState.OPEN) {
-            this.log("GARAGE: Current state of door is open and now sensor shows closed. Setting current state to closed");
+            this.log("GARAGE:  "+this.device.name+"Current state of door is open and now sensor shows closed. Setting current state to closed");
             this.garageDoorService
                 .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
             this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
             this.garageDoorService
                 .setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
         } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSED) {
-            this.log("GARAGE: Current state of door is closed and now sensor shows closed. No action to take");
+            this.log("GARAGE:  "+this.device.name+"Current state of door is closed and now sensor shows closed. No action to take");
         } else if(this.currentGarageState == Characteristic.CurrentDoorState.OPENING) {
-            this.log("GARAGE: Current state of door is opening and now sensor shows closed. Setting current state to closed");
+            this.log("GARAGE:  "+this.device.name+"Current state of door is opening and now sensor shows closed. Setting current state to closed");
             this.garageDoorService
                 .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
             this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
             this.garageDoorService
                 .setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
         } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSING) {
-            this.log("GARAGE: Current state of door is closing and now sensor shows closed. Setting current state to closed");
+            this.log("GARAGE:  "+this.device.name+"Current state of door is closing and now sensor shows closed. Setting current state to closed");
             this.garageDoorService
                 .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
             this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
