@@ -84,6 +84,7 @@ Examples:
 
  # History
 
+ * 0.1.4 - Release for testing alternative garage logic. No change for anyone wanting to use it with the standard logic.
  * 0.1.3 - Added improved debug output. Fixed bug where plugin would crash when there are no garage door opener present.
  * 0.1.2 - Added garage door opener support
  * Previous - Changes not tracked in this document.

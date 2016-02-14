@@ -122,7 +122,7 @@ ISYPlatform.prototype.accessories = function(callback) {
                     var relayAddress = device.address.substr(0, device.address.length-1);
                     relayAddress += '2';
                     var relayDevice = that.isy.getDevice(relayAddress);
-                    homeKitDevice = new ISYGarageDoorAccessory(that.logger.bind(that),device, relayDevice, garageInfo.name, garageInfo.timeToOpen);
+                    homeKitDevice = new ISYGarageDoorAccessory(that.logger.bind(that),device, relayDevice, garageInfo.name, garageInfo.timeToOpen, garageInfo.alternate);
                 } else if(device.deviceType == that.isy.DEVICE_TYPE_LIGHT || device.deviceType == that.isy.DEVICE_TYPE_DIMMABLE_LIGHT) {
 					homeKitDevice = new ISYLightAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_LOCK || device.deviceType == that.isy.DEVICE_TYPE_SECURE_LOCK) {
@@ -891,12 +891,13 @@ ISYElkAlarmPanelAccessory.prototype.getServices = function() {
 // Implements the lock service for isy-js devices.
 
 // Constructs a lock accessory. log = homebridge logger, device = isy-js device object being wrapped
-function ISYGarageDoorAccessory(log,sensorDevice,relayDevice,name,timeToOpen) {
+function ISYGarageDoorAccessory(log,sensorDevice,relayDevice,name,timeToOpen,alternate) {
     ISYAccessoryBaseSetup(this,log,sensorDevice);
     this.name = name;
     this.timeToOpen = timeToOpen;
     this.relayDevice = relayDevice;
-    if(sensorDevice.getCurrentDoorWindowState()) {
+	this.alternate = (alternate == undefined) ? false : alternate;
+    if(this.getSensorState()) {
         this.log("GARAGE: Initial set during startup the sensor is open so defaulting states to open");
         this.targetGarageState = Characteristic.TargetDoorState.OPEN;
         this.currentGarageState = Characteristic.CurrentDoorState.OPEN;
@@ -905,6 +906,14 @@ function ISYGarageDoorAccessory(log,sensorDevice,relayDevice,name,timeToOpen) {
         this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
         this.currentGarageState = Characteristic.CurrentDoorState.CLOSED;
     }
+}
+
+ISYGarageDoorAccessory.prototype.getSensorState = function() {
+	if(this.alternate) {
+		return !this.device.getCurrentDoorWindowState();
+	} else {
+		return this.device.getCurrentDoorWindowState();
+	}
 }
 
 // Handles an identify request
@@ -991,7 +1000,7 @@ ISYGarageDoorAccessory.prototype.completeOpen = function() {
 // Mirrors change in the state of the underlying isj-js device object.
 ISYGarageDoorAccessory.prototype.handleExternalChange = function() {
     // Handle startup.
-    if(this.device.getCurrentDoorWindowState()) {
+    if(this.getSensorState()) {
         if(this.currentGarageState == Characteristic.CurrentDoorState.OPEN) {
             this.log("GARAGE:  "+this.device.name+"Current state of door is open and now sensor matches. No action to take");
         } else if(this.currentGarageState == Characteristic.CurrentDoorState.CLOSED) {
