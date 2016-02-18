@@ -210,6 +210,59 @@ function setCharacteristicAndCheckResult(deviceAddress, service, char, stateToTr
     });
 }
 
+
+function setCharacteristicAndCheckResult(deviceAddress, service, char, stateToTry, deviceCheckFunction, deviceStateToExpect, expectedCount, done) {
+    var bridge = new FakeHomeBridge('./testconfig.json');
+    bridge.startPlatform('../index.js', function () {
+        var deviceToChange = findDevice(bridge, deviceAddress);
+        assert(deviceToChange != null, 'Could not find test device '+deviceAddress);
+        // Hook device change notifications
+        var realCallback = deviceToChange.device.isy.changeCallback;
+        var callbacksReceived = 0;
+        function interceptionCallback(isy,device) {
+            console.log('CALLBACK: Device: '+device.address);
+            realCallback(isy,device);
+            if(device.address == deviceToChange.device.address) {
+                callbacksReceived++;
+                if(callbacksReceived == expectedCount) {
+                    assert(deviceToChange.device[deviceCheckFunction]()==deviceStateToExpect, 'State should have been updated');
+                    // Restore callback in case we want to make another change
+                    isy.changeCallback = realCallback;
+                    done();
+                }
+            }
+        }
+        deviceToChange.device.isy.changeCallback = interceptionCallback;
+        deviceToChange[service].setCharacteristic(char,stateToTry);
+    });
+}
+
+function setCharacteristicAndCheckResultAlt(deviceAddress, service, char, stateToTry, deviceStateToExpect, expectedCount, done) {
+    var bridge = new FakeHomeBridge('./testconfig.json');
+    bridge.startPlatform('../index.js', function () {
+        var deviceToChange = findDevice(bridge, deviceAddress);
+        assert(deviceToChange != null, 'Could not find test device '+deviceAddress);
+        // Hook device change notifications
+        var realCallback = deviceToChange.device.isy.changeCallback;
+        var callbacksReceived = 0;
+        function interceptionCallback(isy,device) {
+            console.log('CALLBACK: Device: '+device.address);
+            realCallback(isy,device);
+            if(device.address == deviceToChange.device.address) {
+                callbacksReceived++;
+                if(callbacksReceived == expectedCount) {
+                    assert(deviceToChange.calculatePowerState()==deviceStateToExpect, 'State should have been updated');
+                    // Restore callback in case we want to make another change
+                    isy.changeCallback = realCallback;
+                    done();
+                }
+            }
+        }
+        deviceToChange.device.isy.changeCallback = interceptionCallback;
+        deviceToChange[service].setCharacteristic(char,stateToTry);
+    });
+}
+
 describe('LIGHT TESTS', function() {
     describe('LIGHT: Device changes update homebridge', function() {
         beforeEach(function(done) {
@@ -457,8 +510,8 @@ describe('SCENE TESTS', function() {
             });
         });
         it('Switching light on results in update to on state and then off to off state', function (done) {
-            setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, true, 'getCurrentLightState', true, 2, function () {
-                setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, false, 'getCurrentLightState', false, 2, done);
+            setCharacteristicAndCheckResult(sampleScene, 'lightService', Characteristic.On, true, 'getCurrentLightState', true, 1, function () {
+                setCharacteristicAndCheckResultAlt(sampleScene, 'lightService', Characteristic.On, false, false, 1, done);
             });
         });
     });
