@@ -898,11 +898,11 @@ function ISYGarageDoorAccessory(log,sensorDevice,relayDevice,name,timeToOpen,alt
     this.relayDevice = relayDevice;
 	this.alternate = (alternate == undefined) ? false : alternate;
     if(this.getSensorState()) {
-        this.log("GARAGE: Initial set during startup the sensor is open so defaulting states to open");
+        this.log("GARAGE: "+this.name+" Initial set during startup the sensor is open so defaulting states to open");
         this.targetGarageState = Characteristic.TargetDoorState.OPEN;
         this.currentGarageState = Characteristic.CurrentDoorState.OPEN;
     } else {
-        this.log("GARAGE: Initial set during startup the sensor is closed so defaulting states to closed");
+        this.log("GARAGE: "+this.name+" Initial set during startup the sensor is closed so defaulting states to closed");
         this.targetGarageState = Characteristic.TargetDoorState.CLOSED;
         this.currentGarageState = Characteristic.CurrentDoorState.CLOSED;
     }
