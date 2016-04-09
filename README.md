@@ -10,6 +10,8 @@ Turns out that HomeBridge platforms can only return a maximum of 100 devices. So
 software will fail adding the HomeBridge to your HomeKit network. To address this issue this platform provides an option to screen out devices based on 
 criteria specified in the config. 
 
+NEEDED: Someone with a Venstat Insteon thermostat to add support for it. I will accept submissions for implementations if someone is interested.
+
 # Installation
 
 1. Install homebridge using: npm install -g homebridge
