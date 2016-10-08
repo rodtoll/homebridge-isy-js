@@ -482,7 +482,7 @@ ISYLightAccessory.prototype.identify = function(callback) {
 		this.device.sendLightCommand(false, function(result) {
 			callback();			
 		});		
-	});
+	}.bind(this));
 }
 
 // Handles request to set the current powerstate from homekit. Will ignore redundant commands. 
@@ -588,11 +588,7 @@ function ISYSceneAccessory(log,device) {
 
 // Handles the identify command
 ISYSceneAccessory.prototype.identify = function(callback) {
-	this.device.sendLightCommand(true, function(result) {
-		this.device.sendLightCommand(false, function(result) {
-			callback();
-		});
-	});
+  callback();
 }
 
 // Handles request to set the current powerstate from homekit. Will ignore redundant commands.
