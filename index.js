@@ -478,8 +478,9 @@ function ISYLightAccessory(log,device) {
 
 // Handles the identify command
 ISYLightAccessory.prototype.identify = function(callback) {
+	var that = this;
 	this.device.sendLightCommand(true, function(result) {
-		this.device.sendLightCommand(false, function(result) {
+		that.device.sendLightCommand(false, function(result) {
 			callback();			
 		});		
 	});
@@ -588,8 +589,9 @@ function ISYSceneAccessory(log,device) {
 
 // Handles the identify command
 ISYSceneAccessory.prototype.identify = function(callback) {
+	var that = this;
 	this.device.sendLightCommand(true, function(result) {
-		this.device.sendLightCommand(false, function(result) {
+		that.device.sendLightCommand(false, function(result) {
 			callback();
 		});
 	});
