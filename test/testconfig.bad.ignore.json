@@ -1,0 +1,27 @@
+{
+  "bridge": {
+    "name": "Homebridge Pi",
+    "username": "CC:22:3D:E3:CE:30",
+    "port": 51826,
+    "pin": "031-45-154"
+  },
+  "description": "Raspberry Pi homebridge",
+  "platforms": [
+    {
+      "platform": "isy-js",
+      "name": "isy-js",
+      "host": "127.0.0.1:3000",
+      "username": "admin",
+      "password": "password",
+      "elkEnabled": true,
+      "includeAllScenes": false,
+      "debugLoggingEnabled": false,
+      "includedScenes": [
+        "27346",
+        "44909"
+      ]
+    }
+  ],
+  "accessories": [
+  ]
+}

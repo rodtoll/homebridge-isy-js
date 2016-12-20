@@ -114,6 +114,38 @@ describe('HomeBridge startup and device enumeration', function() {
             done();
         });
     });
+    it('Ensure startup works with no ignore section and devices capped at 100', function (done) {
+        var bridge = new FakeHomeBridge('./testconfig.bad.ignore.json');
+        bridge.startPlatform('../index.js', function () {
+            assert.ok(bridge.deviceList!=undefined, 'Must have a device list');
+            assert.ok(bridge.deviceList.length > 0, 'Must have devices');
+            assert(bridge.deviceList.length == 100, 'Device list should have been capped at 100 devices. Saw '+bridge.deviceList.length+' devices');
+            done();
+        });
+    });
+    it('Test new simplified ignore syntax', function (done) {
+        var bridge = new FakeHomeBridge('./testconfig.withsimplifiedsyntax.json');
+        bridge.startPlatform('../index.js', function () {
+            assert.equal(bridge.deviceList.length, numExpectedDevices, 'Did not get the expected number of devices');
+            done();
+        });
+    });
+    it('Ensure rename Devices works', function (done) {
+        var bridge = new FakeHomeBridge('./testconfig.withrename.json');
+        bridge.startPlatform('../index.js', function () {
+            var renamesFound = 0;
+            for(var deviceIndex = 0; deviceIndex < bridge.deviceList.length; deviceIndex++) {
+                if(bridge.deviceList[deviceIndex].name == 'Sarah Light 2') {
+                    renamesFound++;
+                }
+                if(bridge.deviceList[deviceIndex].name == 'Sam Light 2') {
+                    renamesFound++;
+                }
+            }
+            assert(renamesFound == 2, 'Should have had 2 devices renamed, actually had '+renamesFound);
+            done();
+        });
+    });
 });
 
 
@@ -210,6 +242,31 @@ function setCharacteristicAndCheckResult(deviceAddress, service, char, stateToTr
     });
 }
 
+function sendIdentifyAndCheckResult(deviceAddress, service, deviceCheckFunction, deviceStateToExpect, expectedCount, done) {
+    var bridge = new FakeHomeBridge('./testconfig.json');
+    bridge.startPlatform('../index.js', function () {
+        var deviceToChange = findDevice(bridge, deviceAddress);
+        assert(deviceToChange != null, 'Could not find test device '+deviceAddress);
+        // Hook device change notifications
+        var realCallback = deviceToChange.device.isy.changeCallback;
+        var callbacksReceived = 0;
+        function interceptionCallback(isy,device) {
+            console.log('CALLBACK: Device: '+device.address);
+            realCallback(isy,device);
+            if(device.address == deviceToChange.device.address) {
+                callbacksReceived++;
+                if(callbacksReceived == expectedCount) {
+                    assert(deviceToChange.device[deviceCheckFunction]()==deviceStateToExpect, 'State should have been updated');
+                    // Restore callback in case we want to make another change
+                    isy.changeCallback = realCallback;
+                    done();
+                }
+            }
+        }
+        deviceToChange.device.isy.changeCallback = interceptionCallback;
+        deviceToChange.identify();
+    });
+}
 
 function setCharacteristicAndCheckResult(deviceAddress, service, char, stateToTry, deviceCheckFunction, deviceStateToExpect, expectedCount, done) {
     var bridge = new FakeHomeBridge('./testconfig.json');
@@ -321,6 +378,16 @@ describe('LIGHT TESTS', function() {
         });
         it('Switching light to 0% results in update to dim level to 0', function (done) {
             setCharacteristicAndCheckResult(sampleDimmableLightWhichIsOn, 'lightService', Characteristic.Brightness, 0, 'getCurrentLightDimState', 0, 1, done);
+        });
+    });
+    describe('LIGHT: Identify works and doesnt crash', function() {
+        beforeEach(function (done) {
+            resetServerState(function () {
+                done();
+            });
+        });
+        it('Sending identify turns light on then off', function (done) {
+            sendIdentifyAndCheckResult(sampleDimmableLightWhichIsOff, 'lightService', 'getCurrentLightState', false, 2, done);
         });
     });
 });

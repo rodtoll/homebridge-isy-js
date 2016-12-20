@@ -1,7 +1,8 @@
 # homebridge-isy-js [![Build Status](https://api.travis-ci.org/rodtoll/homebridge-isy-js.svg?branch=master)](https://api.travis-ci.org/rodtoll/isy-js.svg?branch=master)
-ISY-99 REST / WebSockets based HomeBridge platform. 
+ISY-994 REST / WebSockets based HomeBridge platform. 
 
 NOTE: Homebridge-isy-js now includes support for garage door openers. Make sure you ensure a garage door is clear before closing it.
+
 
 Supports the following Insteon devices: Lights (dimmable and non-dimmable), Fans, Outlets, Door/Window Sensors, MorningLinc locks, Inline Lincs, Motion Sensors and I/O Lincs.
 Also supports ZWave based locks. If elkEnabled is set to true then this will also expose your Elk Alarm Panel and all of your Elk Sensors. 
@@ -11,6 +12,10 @@ software will fail adding the HomeBridge to your HomeKit network. To address thi
 criteria specified in the config. 
 
 NEEDED: Someone with a Venstat Insteon thermostat to add support for it. I will accept submissions for implementations if someone is interested.
+
+# Requirements
+
+Only the ISY 994 and newer devices are supported. The ISY 99i device is no longer supported as this library depends on a later version of the REST/Websocket interface. 
 
 # Installation
 
@@ -46,6 +51,9 @@ Configuration sample:
                 { "nameContains": "Remote", "lastAddressDigit": "", "address": "" },    
                 { "nameContains": "Keypad", "lastAddressDigit": "2", "address": "" },
             ]
+            "renameDevices": [
+                { "nameContains": "BadName", "newName": "Good name" }
+            ]
         }
      ]
 ```
@@ -66,7 +74,11 @@ Each entry should have the following elements: "address" - the address of the IO
 * "ignoreDevices" - Array of objects specifying criteria for screening out devices from the network. nameContains is the only required criteria. If the other criteri are blank all devices will match those criteria (providing they match the name criteria).
 * (Under ignoreDevices) "nameContains" - Specifies a substring to check against the names of the ISY devices. Required field for the criteria.
 * (Under ignoreDevices) "lastAddressDigit" - Specifies a single digit in the ISY address of a device which should be used to match the device. Example use of this is for composite devices like keypads so you can screen out the non-main buttons. 
-* (Under ignoreDevices) "address" - ISY address to match.		   
+* (Under ignoreDevices) "address" - ISY address to match.
+* "renameDevices" - Array of objects specifying devices you want to rename based on their address or name.
+* (Under renameDevices) "nameContains" - Specifies a substring to check against the names of the ISY devices. Required field for the criteria.
+* (Under renameDevices) "address" - ISY address to match.
+* (Under renameDevices) "newName" - New name to give to the device.
      
 ```    
 Examples:
@@ -86,6 +98,7 @@ Examples:
 
  # History
 
+ * 0.1.7 - Fixed crash when there is no ignoreDevices entry. Also added new renameDevices section to enable device renaming. Added note to highlight ISY 99 is no longer supported, you needed an ISY 994 or newer. Added checks to ensure device list doesn't exceed 100 devices. Simplified ignore syntax so blank elements no longer needed.
  * 0.1.6 - Addressed crash when identify called on lights.
  * 0.1.4 - Release for testing alternative garage logic. No change for anyone wanting to use it with the standard logic.
  * 0.1.3 - Added improved debug output. Fixed bug where plugin would crash when there are no garage door opener present.

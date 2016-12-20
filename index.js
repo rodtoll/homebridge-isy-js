@@ -55,42 +55,46 @@ ISYPlatform.prototype.logger = function(msg) {
 // Checks the device against the configuration to see if it should be ignored. 
 ISYPlatform.prototype.shouldIgnore = function(device) {
 	var deviceAddress = device.address;
-	var deviceName = device.name;
 	if(device.deviceType==this.isy.DEVICE_TYPE_SCENE) {
-		if(this.includeAllScenes == true) {
-			return false;
-		} else {
-			for(var index = 0; index < this.includedScenes.length; index++) {
-				if(this.includedScenes[index] == deviceAddress) {
-					return false;
-				}
-			}
-			return true;
-		}
-	} else {
-		for (var index = 0; index < this.config.ignoreDevices.length; index++) {
-			var rule = this.config.ignoreDevices[index];
-			if (rule.nameContains != "") {
-				if (deviceName.indexOf(rule.nameContains) == -1) {
-					continue;
-				}
-			}
-			if (rule.lastAddressDigit != "") {
-				if (deviceAddress.indexOf(rule.lastAddressDigit, deviceAddress.length - 2) == -1) {
-					continue;
-				}
-			}
-			if (rule.address != "") {
-				if (deviceAddress != rule.address) {
-					continue;
-				}
-			}
-			this.logger("ISYPLATFORM: Ignoring device: " + deviceName + " [" + deviceAddress + "] because of rule [" + rule.nameContains + "] [" + rule.lastAddressDigit + "] [" + rule.address + "]");
-			return true;
-
-		}
-	}
-	return false;	
+        if (this.includeAllScenes == true) {
+            return false;
+        } else if (this.includedScenes == undefined) {
+            return false;
+        } else {
+            for (var index = 0; index < this.includedScenes.length; index++) {
+                if (this.includedScenes[index] == deviceAddress) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    } else {
+        if (this.config.ignoreDevices == undefined) {
+            return false;
+        }
+        var deviceName = device.name;
+        for (var index = 0; index < this.config.ignoreDevices.length; index++) {
+            var rule = this.config.ignoreDevices[index];
+            if (rule.nameContains != undefined && rule.nameContains != "") {
+                if (deviceName.indexOf(rule.nameContains) == -1) {
+                    continue;
+                }
+            }
+            if (rule.lastAddressDigit != undefined && rule.lastAddressDigit != "") {
+                if (deviceAddress.indexOf(rule.lastAddressDigit, deviceAddress.length - 2) == -1) {
+                    continue;
+                }
+            }
+            if (rule.address != undefined && rule.address != "") {
+                if (deviceAddress != rule.address) {
+                    continue;
+                }
+            }
+            this.logger("ISYPLATFORM: Ignoring device: " + deviceName + " [" + deviceAddress + "] because of rule [" + rule.nameContains + "] [" + rule.lastAddressDigit + "] [" + rule.address + "]");
+            return true;
+        }
+    }
+	return false;
 }
 
 ISYPlatform.prototype.getGarageEntry = function(address) {
@@ -106,6 +110,40 @@ ISYPlatform.prototype.getGarageEntry = function(address) {
     return null;
 }
 
+ISYPlatform.prototype.renameDeviceIfNeeded = function(device) {
+    var deviceAddress = device.address;
+    var deviceName = device.name;
+    if(this.config.renameDevices == undefined) {
+        return deviceName;
+    }
+    for (var index = 0; index < this.config.renameDevices.length; index++) {
+        var rule = this.config.renameDevices[index];
+        if (rule.nameContains != undefined && rule.nameContains != "") {
+            if (deviceName.indexOf(rule.nameContains) == -1) {
+                continue;
+            }
+        }
+        if (rule.lastAddressDigit != undefined && rule.lastAddressDigit != "") {
+            if (deviceAddress.indexOf(rule.lastAddressDigit, deviceAddress.length - 2) == -1) {
+                continue;
+            }
+        }
+        if (rule.address != undefined && rule.address != "") {
+            if (deviceAddress != rule.address) {
+                continue;
+            }
+        }
+        if(rule.newName == undefined) {
+            this.logger("ISYPLATFORM: Rule to rename device is present but no new name specified. Impacting device: "+deviceName);
+            return deviceName;
+        } else {
+            this.logger("ISYPLATFORM: Renaming device: " + deviceName + "[" + deviceAddress + "] to [" + rule.newName + "] because of rule [" + rule.nameContains + "] [" + rule.lastAddressDigit + "] [" + rule.address + "]");
+            return rule.newName;
+        }
+    }
+    return deviceName;
+}
+
 
 // Calls the isy-js library, retrieves the list of devices, and maps them to appropriate ISYXXXXAccessory devices.
 ISYPlatform.prototype.accessories = function(callback) {
@@ -118,6 +156,11 @@ ISYPlatform.prototype.accessories = function(callback) {
 			var homeKitDevice = null;
             var garageInfo = that.getGarageEntry(device.address);
 			if(!that.shouldIgnore(device)) {
+			    if(results.length >= 100) {
+			        that.logger("ISYPLATFORM: Skipping any further devices as 100 limit has been reached");
+                    break;
+                }
+                device.name = that.renameDeviceIfNeeded(device);
                 if(garageInfo != null) {
                     var relayAddress = device.address.substr(0, device.address.length-1);
                     relayAddress += '2';
@@ -150,10 +193,15 @@ ISYPlatform.prototype.accessories = function(callback) {
 			}
 		}
 		if(that.isy.elkEnabled) {
-			var panelDevice = that.isy.getElkAlarmPanel();
-			var panelDeviceHK = new ISYElkAlarmPanelAccessory(that.log,panelDevice);
-			deviceMap[panelDevice.address] = panelDeviceHK;
-			results.push(panelDeviceHK);
+		    if(results.length >= 100) {
+                that.logger("ISYPLATFORM: Skipping adding Elk Alarm panel as device count already at maximum");
+            } else {
+                var panelDevice = that.isy.getElkAlarmPanel();
+                panelDevice.name = that.renameDeviceIfNeeded(panelDevice);
+                var panelDeviceHK = new ISYElkAlarmPanelAccessory(that.log, panelDevice);
+                deviceMap[panelDevice.address] = panelDeviceHK;
+                results.push(panelDeviceHK);
+            }
 		}
 		that.logger("ISYPLATFORM: Filtered device has: "+results.length+" devices");
 		callback(results);		

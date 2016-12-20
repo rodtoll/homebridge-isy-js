@@ -1,0 +1,108 @@
+{
+  "bridge": {
+    "name": "Homebridge Pi",
+    "username": "CC:22:3D:E3:CE:30",
+    "port": 51826,
+    "pin": "031-45-154"
+  },
+  "description": "Raspberry Pi homebridge",
+  "platforms": [
+    {
+      "platform": "isy-js",
+      "name": "isy-js",
+      "host": "127.0.0.1:3000",
+      "username": "admin",
+      "password": "password",
+      "elkEnabled": true,
+      "includeAllScenes": false,
+      "debugLoggingEnabled": false,
+      "includedScenes": [
+        "27346",
+        "44909"
+      ],
+      "garageDoors": [
+        { "address": "17 79 81 1", "name": "Garage Door", "timeToOpen": 1000 },
+        { "address": "17 80 81 1", "name": "Garage Door-Open", "timeToOpen": 1000 }
+      ],
+      "ignoreDevices": [
+        {
+          "nameContains": "S -",
+          "lastAddressDigit": "",
+          "address": ""
+        },
+        {
+          "nameContains": "Fireplace",
+          "lastAddressDigit": "",
+          "address": ""
+        },
+        {
+          "nameContains": "Bedroom.Side Gate",
+          "lastAddressDigit": "",
+          "address": ""
+        },
+        {
+          "nameContains": "Unused",
+          "lastAddressDigit": "",
+          "address": ""
+        },
+        {
+          "nameContains": "Remote",
+          "lastAddressDigit": "",
+          "address": ""
+        },
+        {
+          "nameContains": "Keypad",
+          "lastAddressDigit": "2",
+          "address": ""
+        },
+        {
+          "nameContains": "Keypad",
+          "lastAddressDigit": "3",
+          "address": ""
+        },
+        {
+          "nameContains": "Keypad",
+          "lastAddressDigit": "4",
+          "address": ""
+        },
+        {
+          "nameContains": "Keypad",
+          "lastAddressDigit": "5",
+          "address": ""
+        },
+        {
+          "nameContains": "Keypad",
+          "lastAddressDigit": "6",
+          "address": ""
+        },
+        {
+          "nameContains": "Keypad",
+          "lastAddressDigit": "7",
+          "address": ""
+        },
+        {
+          "nameContains": "Keypad",
+          "lastAddressDigit": "8",
+          "address": ""
+        },
+        {
+          "nameContains": "KeyFob",
+          "lastAddressDigit": "",
+          "address": ""
+        }
+      ],
+      "renameDevices": [
+        {
+          "nameContains": "Sarah Light",
+          "newName": "Sarah Light 2"
+        },
+        {
+          "nameContains": "Sam Light",
+          "newName": "Sam Light 2"
+        }
+      ]
+    }
+  ],
+  "accessories": [
+  ]
+}

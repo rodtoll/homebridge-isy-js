@@ -31,7 +31,7 @@ FakeHomeBridge.prototype.startPlatform = function(fileName, done) {
     var that = this;
     function handleCallback(deviceList) {
         assert(deviceList != undefined && deviceList != null, 'Must return a device list');
-        assert(deviceList.length <= 100, 'Cannot return more then 100 devices');
+        // assert(deviceList.length <= 100, 'Cannot return more then 100 devices');
         that.deviceList = deviceList;
         for(var deviceIndex = 0; deviceIndex < that.deviceList.length; deviceIndex++) {
             var device = that.deviceList[deviceIndex];
