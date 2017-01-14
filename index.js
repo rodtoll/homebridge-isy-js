@@ -1015,7 +1015,7 @@ ISYGarageDoorAccessory.prototype.setTargetDoorState = function(targetState,callb
             this.garageDoorService
                 .setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPENING);
             this.sendGarageDoorCommand(function() {
-                setTimeout(that.sendGarageDoorCommand(callback),3000);
+                setTimeout(function() { that.sendGarageDoorCommand(callback); },3000);
                 setTimeout(that.completeOpen.bind(that), that.timeToOpen);
             });
         }

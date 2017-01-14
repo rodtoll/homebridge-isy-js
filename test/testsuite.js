@@ -763,11 +763,11 @@ describe('GARAGE DOOR OPENER TESTS', function() {
                         assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Third change should be current state");
                         assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPENING, "Third change should be to the state of open");
                     } else if(callbackCount == 3) {
-                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Fourth change should be target state and be redundant (from change notification from is)");
-                        assert.equal(characteristic.value, Characteristic.TargetDoorState.OPEN, "Fourth change should be to the state of open and be redundant  (from change notification from is)");
-                    } else if(callbackCount == 4) {
                         assert.equal(characteristic.name, Characteristic.CurrentDoorState.name, "Final change should be current state and should be open");
                         assert.equal(characteristic.value, Characteristic.CurrentDoorState.OPEN, "Final change should be current state and should be open");
+                    } else if(callbackCount == 4) {
+                        assert.equal(characteristic.name, Characteristic.TargetDoorState.name, "Fourth change should be target state and be redundant (from change notification from is)");
+                        assert.equal(characteristic.value, Characteristic.TargetDoorState.OPEN, "Fourth change should be to the state of open and be redundant  (from change notification from is)");
                         done();
                     }
                     callbackCount++;

@@ -98,6 +98,7 @@ Examples:
 
  # History
 
+ * 0.1.8 - Fixed crash in tests (race condition) and fixed crash in garage door device.
  * 0.1.7 - Fixed crash when there is no ignoreDevices entry. Also added new renameDevices section to enable device renaming. Added note to highlight ISY 99 is no longer supported, you needed an ISY 994 or newer. Added checks to ensure device list doesn't exceed 100 devices. Simplified ignore syntax so blank elements no longer needed.
  * 0.1.6 - Addressed crash when identify called on lights.
  * 0.1.4 - Release for testing alternative garage logic. No change for anyone wanting to use it with the standard logic.
