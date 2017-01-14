@@ -782,6 +782,7 @@ describe('GARAGE DOOR OPENER TESTS', function() {
             });
         });
         it('GARAGE DOOR OPENER: Garage door is closed, start an open and then do a close. State enters opening and transitions to closing and then to closed', function (done) {
+            this.timeout(10000);
             var bridge = new FakeHomeBridge('./testconfig.json');
             bridge.startPlatform('../index.js', function () {
                 var callbackCount = 0;
