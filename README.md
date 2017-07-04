@@ -1,6 +1,6 @@
 # homebridge-isy-js [![Build Status](https://api.travis-ci.org/rodtoll/homebridge-isy-js.svg?branch=master)](https://api.travis-ci.org/rodtoll/isy-js.svg?branch=master)
-# ACTIVE DEVELOPMENT & SUPPORT SUSPENDED
-I am sad to announce that I am suspending support for this homebridge plugin. This means I will no longer be addressing any open bugs, responding to feature requests or 
+# ACTIVE DEVELOPMENT & SUPPORT DISCONTINUED
+I am sad to announce that I am discontinuing support for this homebridge plugin. This means I will no longer be addressing any open bugs, responding to feature requests or 
 releasing new versions. Between work and my home life there simply isn't the time. I will leave the repository online and the 
 package on npm but that is it. As this code is licensed under the MIT license you are of course welcome to branch this code and make it your own and use it in your 
 own projects -- but you do so, as always, with no warranty or support from me. 
