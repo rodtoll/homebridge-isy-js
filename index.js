@@ -174,6 +174,8 @@ ISYPlatform.prototype.accessories = function(callback) {
 					homeKitDevice = new ISYOutletAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_FAN) {
 					homeKitDevice = new ISYFanAccessory(that.logger.bind(that),device);
+				} else if(device.deviceType == that.isy.DEVICE_TYPE_LEAK_SENSOR) {
+					homeKitDevice = new ISYLeakSensorAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_DOOR_WINDOW_SENSOR) {
 					homeKitDevice = new ISYDoorWindowSensorAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_ALARM_DOOR_WINDOW_SENSOR) {
@@ -703,6 +705,59 @@ ISYSceneAccessory.prototype.getServices = function() {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+// Leak SENSOR - ISYLeakSensorAccessory
+// Implements the leak service.
+
+// Constructs a Door Window Sensor (contact sensor) accessory. log = HomeBridge logger, device = wrapped isy-js device.
+function ISYLeakSensorAccessory(log,device) {
+	ISYAccessoryBaseSetup(this,log,device);
+	this.leakState = false;
+}
+
+// Handles the identify command.
+ISYLeakSensorAccessory.prototype.identify = function(callback) {
+	// Do the identify action
+	callback();
+}
+
+// Translates the state of the underlying device object into the corresponding homekit compatible state
+ISYLeakSensorAccessory.prototype.translateCurrentLeakState = function() {
+	return (this.device.getCurrentLeakState()) ? Characteristic.LeakDetected.LEAK_DETECTED : Characteristic.LeakDetected.LEAK_NOT_DETECTED;	
+}
+
+// Handles the request to get he current door window state.
+ISYLeakSensorAccessory.prototype.getCurrentLeakState = function(callback) {
+	callback(null,this.translateCurrentLeakState());
+}
+
+// Mirrors change in the state of the underlying isj-js device object.
+ISYLeakSensorAccessory.prototype.handleExternalChange = function() {
+	this.sensorService
+		.setCharacteristic(Characteristic.LeakDetected, this.translateCurrentLeakState());
+}
+
+// Returns the set of services supported by this object.
+ISYLeakSensorAccessory.prototype.getServices = function() {
+	var informationService = new Service.AccessoryInformation();
+	
+	informationService
+      .setCharacteristic(Characteristic.Manufacturer, "SmartHome")
+      .setCharacteristic(Characteristic.Model, this.device.deviceFriendlyName)
+      .setCharacteristic(Characteristic.SerialNumber, this.device.address);	
+	  
+	var sensorService = new Service.LeakSensor();
+	
+	this.sensorService = sensorService;
+	this.informationService = informationService;	
+    
+    sensorService
+      .getCharacteristic(Characteristic.LeakDetected)
+      .on('get', this.getCurrentLeakState.bind(this));
+    
+    return [informationService, sensorService];	
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
 // CONTACT SENSOR - ISYDoorWindowSensorAccessory
 // Implements the ContactSensor service.
 
@@ -1142,6 +1197,7 @@ module.exports.ISYLightAccessory = ISYLightAccessory;
 module.exports.ISYLockAccessory = ISYLockAccessory;
 module.exports.ISYOutletAccessory = ISYOutletAccessory;
 module.exports.ISYDoorWindowSensorAccessory = ISYDoorWindowSensorAccessory;
+module.exports.ISYLeakSensorAccessory = ISYLeakSensorAccessory;
 module.exports.ISYMotionSensorAccessory = ISYMotionSensorAccessory;
 module.exports.ISYElkAlarmPanelAccessory = ISYElkAlarmPanelAccessory;
 module.exports.ISYSceneAccessory = ISYSceneAccessory;
