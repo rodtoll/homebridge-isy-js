@@ -1,4 +1,4 @@
-# homebridge-isy-js [![Build Status](https://api.travis-ci.org/rodtoll/homebridge-isy-js.svg?branch=master)](https://api.travis-ci.org/rodtoll/isy-js.svg?branch=master)
+# homebridge-isy-js
 # ACTIVE DEVELOPMENT & SUPPORT SUSPENDED
 I am sad to announce that I am suspending support for this homebridge plugin. This means I will no longer be addressing any open bugs, responding to feature requests or 
 releasing new versions. Between work and my home life there simply isn't the time. I will leave the repository online and the 
