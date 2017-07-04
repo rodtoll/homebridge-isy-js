@@ -1,7 +1,7 @@
 {
   "name": "homebridge-isy-js",
-  "version": "0.1.8",
-  "description": "Homebridge plugin for ISY series of home controllers from universal devices ",
+  "version": "0.1.9",
+  "description": "Homebridge plugin for ISY series of home controllers from universal devices. Unsupported and no longer under active development.",
   "note": "",
   "main": "index.js",
   "scripts": {

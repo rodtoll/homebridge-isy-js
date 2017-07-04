@@ -1,4 +1,16 @@
 # homebridge-isy-js [![Build Status](https://api.travis-ci.org/rodtoll/homebridge-isy-js.svg?branch=master)](https://api.travis-ci.org/rodtoll/isy-js.svg?branch=master)
+# ACTIVE DEVELOPMENT & SUPPORT SUSPENDED
+I am sad to announce that I am suspending support for this homebridge plugin. This means I will no longer be addressing any open bugs, responding to feature requests or 
+releasing new versions. Between work and my home life there simply isn't the time. I will leave the repository online and the 
+package on npm but that is it. As this code is licensed under the MIT license you are of course welcome to branch this code and make it your own and use it in your 
+own projects -- but you do so, as always, with no warranty or support from me. 
+
+I want to thank everyone who helped along the way through questions and issues and code contributions -- your assistance was very much appreciated. And it made the 
+late nights and testing worth it. 
+
+If you find a good alternative and want others to know about it then open a new issue and provide a pointer. I might post a link here.
+
+# Old Readme..
 ISY-994 REST / WebSockets based HomeBridge platform. 
 
 NOTE: Homebridge-isy-js now includes support for garage door openers. Make sure you ensure a garage door is clear before closing it.
@@ -98,6 +110,7 @@ Examples:
 
  # History
 
+ * 0.1.9 - Active development ended. 
  * 0.1.8 - Fixed crash in tests (race condition) and fixed crash in garage door device.
  * 0.1.7 - Fixed crash when there is no ignoreDevices entry. Also added new renameDevices section to enable device renaming. Added note to highlight ISY 99 is no longer supported, you needed an ISY 994 or newer. Added checks to ensure device list doesn't exceed 100 devices. Simplified ignore syntax so blank elements no longer needed.
  * 0.1.6 - Addressed crash when identify called on lights.
