@@ -1,19 +1,9 @@
-# homebridge-isy-js [![Build Status](https://api.travis-ci.org/rodtoll/homebridge-isy-js.svg?branch=master)](https://api.travis-ci.org/rodtoll/isy-js.svg?branch=master)
+# Another fork of isy-js...
+I've decided to create my own fork of this project. I had a problem with HOOBS last night that gave me a scare that this had stopped working (it hadn't). When I tried to "migrate" to another fork that's available, I found that while it had more features it was unstable and didn't work well with my setup. I have never had any stability issues with this version...
 
-# WANT A VERSION UNDER ACTIVE DEVELOPMENT?
-Other users have taken the work here and made numerous improvements. I have not tested any of these or can I vouch for their quality but I am providing pointers as a service. Below are the ones I know about:
-* https://github.com/pradeepmouli/homebridge-isy-js
+So, I decided to make a fork simply to bring the project within my locus of control, and with the objective of simply managing tech debt to keep it working over time. 
 
-# ACTIVE DEVELOPMENT & SUPPORT DISCONTINUED
-I am sad to announce that I am discontinuing support for this homebridge plugin. This means I will no longer be addressing any open bugs, responding to feature requests or 
-releasing new versions. Between work and my home life there simply isn't the time. I will leave the repository online and the 
-package on npm but that is it. As this code is licensed under the MIT license you are of course welcome to branch this code and make it your own and use it in your 
-own projects -- but you do so, as always, with no warranty or support from me. 
-
-I want to thank everyone who helped along the way through questions and issues and code contributions -- your assistance was very much appreciated. And it made the 
-late nights and testing worth it. 
-
-If you find a good alternative and want others to know about it then open a new issue and provide a pointer. I might post a link here.
+I may add a feature from time to time but the goal is to keep this as stable as the original.
 
 # Old Readme..
 ISY-994 REST / WebSockets based HomeBridge platform. 
