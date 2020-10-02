@@ -1,7 +1,7 @@
 {
-  "name": "homebridge-isy-js",
+  "name": "homebridge-isy-njs",
   "version": "0.1.9",
-  "description": "Homebridge plugin for ISY series of home controllers from universal devices. Unsupported and no longer under active development.",
+  "description": "Homebridge plugin for ISY series of home controllers from universal devices.",
   "note": "",
   "main": "index.js",
   "scripts": {
@@ -9,12 +9,12 @@
     "start": "echo \"Error: configure and run homebridge to start\" && exit 1"
   },
   "engines": {
-    "node": ">4.0.0",
-    "homebridge": ">=0.2.0"
+    "node": ">12.0.0",
+    "homebridge": ">=1.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/rodtoll/homebridge-isy-js.git"
+    "url": "https://github.com/nathanjskelton/homebridge-isy-njs.git"
   },
   "keywords": [
     "homebridge-plugin",
@@ -32,12 +32,12 @@
     "restler": "",
     "faye-websocket": "",
     "xmldoc": "",
-    "isy-js": ""
+    "isy-njs": ""
   },
   "author": "rodtoll",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rodtoll/homebridge-isy-js/issues"
+    "url": "https://github.com/nathanjskelton/homebridge-isy-njs/issues"
   },
-  "homepage": "https://github.com/rodtoll/homebridge-isy-js"
+  "homepage": "https://github.com/nathanjskelton/homebridge-isy-njs"
 }
