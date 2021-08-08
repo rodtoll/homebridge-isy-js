@@ -58,6 +58,12 @@ Configuration sample:
                 { "nameContains": "Remote", "lastAddressDigit": "", "address": "" },    
                 { "nameContains": "Keypad", "lastAddressDigit": "2", "address": "" },
             ]
+            makeSwitchDevices": [        
+                { "nameContains": "ApplianceLinc"},
+                { "nameContains": "Bedroom.Side Gate", "lastAddressDigit": "", "address": ""},
+                { "nameContains": "Remote", "lastAddressDigit": "", "address": "" },    
+                { "nameContains": "Keypad", "lastAddressDigit": "2", "address": "" },
+            ]
             "renameDevices": [
                 { "nameContains": "BadName", "newName": "Good name" }
             ]
@@ -79,6 +85,7 @@ Each entry should have the following elements: "address" - the address of the IO
 * "includeAllScenes" - true if you want the platform to expose all the scenes. Setups usually have a LOT of scenes any only 100 devices are supported from a bridge. It is recommended you proactively include the scenes you want in includedScenes.
 * "includedScenes" - An array of the addresses of the scenes you want to include as lighting devices.
 * "ignoreDevices" - Array of objects specifying criteria for screening out devices from the network. nameContains is the only required criteria. If the other criteri are blank all devices will match those criteria (providing they match the name criteria).
+* "makeSwitchDevices" - Array of objects specifying criteria for forcing a non-dimmable light to show as a switch in homekit. ISY doesn't have switches but sometimes it's necessary to make a switchlinc or something show as a switch so it doesnt get toggleed with lights in a group.
 * (Under ignoreDevices) "nameContains" - Specifies a substring to check against the names of the ISY devices. Required field for the criteria.
 * (Under ignoreDevices) "lastAddressDigit" - Specifies a single digit in the ISY address of a device which should be used to match the device. Example use of this is for composite devices like keypads so you can screen out the non-main buttons. 
 * (Under ignoreDevices) "address" - ISY address to match.
