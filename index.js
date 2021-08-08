@@ -6,7 +6,7 @@
 
 var Service, Characteristic, types;
 
-var isy = require('isy-js');
+var isy = require('isy-njs');
 
 // Global device map. Needed to map incoming notifications to the corresponding HomeKit device for update.
 var deviceMap = {};
@@ -25,7 +25,7 @@ module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   types = homebridge.hapLegacyTypes;  
-  homebridge.registerPlatform("homebridge-isy-js", "isy-js", ISYPlatform);
+  homebridge.registerPlatform("homebridge-isy-njs", "isy-njs", ISYPlatform);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,6 +97,43 @@ ISYPlatform.prototype.shouldIgnore = function(device) {
 	return false;
 }
 
+
+// Checks the device against the configuration to see if it should be a switch instead of a light.
+ISYPlatform.prototype.makeSwitch = function(device) {
+	var deviceAddress = device.address;
+	this.logger("ISYPLATFORM: [DEBUG makeSwitch] checking "+device.name+" = "+device.deviceType);
+	if(device.deviceType==this.isy.DEVICE_TYPE_LIGHT) {
+		if (this.config.makeSwitchDevices == undefined) {
+			this.logger("ISYPLATFORM: [DEBUG makeSwitch] makeSwitchDevices undefined");
+			return false;
+		}
+		var deviceName = device.name;
+		for (var index = 0; index < this.config.makeSwitchDevices.length; index++) {
+			var rule = this.config.makeSwitchDevices[index];
+			this.logger("ISYPLATFORM: [DEBUG makeSwitch] rule="+rule);
+			if (rule.nameContains != undefined && rule.nameContains != "") {
+				if (deviceName.indexOf(rule.nameContains) == -1) {
+					continue;
+				}
+			}
+			if (rule.lastAddressDigit != undefined && rule.lastAddressDigit != "") {
+				if (deviceAddress.indexOf(rule.lastAddressDigit, deviceAddress.length - 2) == -1) {
+					continue;
+				}
+			}
+			if (rule.address != undefined && rule.address != "") {
+				if (deviceAddress != rule.address) {
+					continue;
+				}
+			}
+			this.logger("ISYPLATFORM: Making light a switch for device: " + deviceName + " [" + deviceAddress + "] because of rule [" + rule.nameContains + "] [" + rule.lastAddressDigit + "] [" + rule.address + "]");
+			return true;
+		}
+	}
+	return false;
+}
+
+
 ISYPlatform.prototype.getGarageEntry = function(address) {
     var garageDoorList = this.config.garageDoors;
     if(garageDoorList != undefined) {
@@ -167,7 +204,11 @@ ISYPlatform.prototype.accessories = function(callback) {
                     var relayDevice = that.isy.getDevice(relayAddress);
                     homeKitDevice = new ISYGarageDoorAccessory(that.logger.bind(that),device, relayDevice, garageInfo.name, garageInfo.timeToOpen, garageInfo.alternate);
                 } else if(device.deviceType == that.isy.DEVICE_TYPE_LIGHT || device.deviceType == that.isy.DEVICE_TYPE_DIMMABLE_LIGHT) {
-					homeKitDevice = new ISYLightAccessory(that.logger.bind(that),device);
+                	if (that.makeSwitch(device)) {
+						homeKitDevice = new ISYSwitchAccessory(that.logger.bind(that), device);
+					} else {
+						homeKitDevice = new ISYLightAccessory(that.logger.bind(that), device);
+					}
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_LOCK || device.deviceType == that.isy.DEVICE_TYPE_SECURE_LOCK) {
 					homeKitDevice = new ISYLockAccessory(that.logger.bind(that),device);
 				} else if(device.deviceType == that.isy.DEVICE_TYPE_OUTLET) {
@@ -360,6 +401,81 @@ ISYFanAccessory.prototype.getServices = function() {
     
     return [informationService, fanService];	
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// SWITCHES - ISYSwitchAccessory
+// Implements the Outlet service for ISY devices.
+
+// Constructs a switch. log = HomeBridge logger, device = isy-js device to wrap
+function ISYSwitchAccessory(log,device) {
+	ISYAccessoryBaseSetup(this,log,device);
+}
+
+// Handles the identify command
+ISYSwitchAccessory.prototype.identify = function(callback) {
+	// Do the identify action
+	callback();
+}
+
+// Handles a request to set the switch state. Ignores redundant sets based on current states.
+ISYSwitchAccessory.prototype.setSwitchState = function(switchState,callback) {
+	this.log("SWITCH: "+this.device.name+" Sending command to set switch state to: "+switchState);
+	if(switchState != this.device.getCurrentLightState()) {
+		this.device.sendLightCommand(switchState, function(result) {
+			callback();
+		});
+	} else {
+		callback();
+	}
+}
+
+// Handles a request to get the current outlet state based on underlying isy-js device object.
+ISYSwitchAccessory.prototype.getSwitchState = function(callback) {
+	callback(null,this.device.getCurrentLightState());
+}
+
+// Handles a request to get the current in use state of the outlet. We set this to true always as
+// there is no way to deterine this through the isy.
+ISYSwitchAccessory.prototype.getSwitchInUseState = function(callback) {
+	callback(null, true);
+}
+
+// Mirrors change in the state of the underlying isj-js device object.
+ISYSwitchAccessory.prototype.handleExternalChange = function() {
+	this.switchService
+		.setCharacteristic(Characteristic.On, this.device.getCurrentLightState());
+}
+
+// Returns the set of services supported by this object.
+ISYSwitchAccessory.prototype.getServices = function() {
+	var informationService = new Service.AccessoryInformation();
+
+	informationService
+		.setCharacteristic(Characteristic.Manufacturer, "SmartHome")
+		.setCharacteristic(Characteristic.Model, this.device.deviceFriendlyName)
+		.setCharacteristic(Characteristic.SerialNumber, this.device.address);
+
+	var switchService = new Service.Switch();
+
+	this.switchService = switchService;
+	this.informationService = informationService;
+
+	switchService
+		.getCharacteristic(Characteristic.On)
+		.on('set', this.setSwitchState.bind(this));
+
+	switchService
+		.getCharacteristic(Characteristic.On)
+		.on('get', this.getSwitchState.bind(this));
+
+	switchService
+		.getCharacteristic(Characteristic.OutletInUse)
+		.on('get', this.getSwitchInUseState.bind(this));
+
+	return [informationService, switchService];
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // OUTLETS - ISYOutletAccessory
@@ -600,7 +716,7 @@ ISYLightAccessory.prototype.getServices = function() {
       .setCharacteristic(Characteristic.SerialNumber, this.device.address);	
 	  
 	var lightBulbService = new Service.Lightbulb();
-	
+
 	this.informationService = informationService;
 	this.lightService = lightBulbService; 	
 	
